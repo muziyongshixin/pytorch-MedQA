@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import socket
+import time
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 __author__ = 'liyz'
@@ -18,8 +20,10 @@ from utils.eval import eval_on_model
 from utils.functions import pop_dict_keys
 from IPython import embed
 from torch.nn import CrossEntropyLoss
+from tensorboardX import SummaryWriter
 
 logger = logging.getLogger(__name__)
+
 
 # print the structure and parameters number of the net
 def print_network(net):
@@ -53,11 +57,11 @@ def train(config_path):
     logger.info('constructing model...')
     model_choose = global_config['global']['model']
     dataset_h5_path = global_config['data']['dataset_h5']
-    if model_choose =='MedQA-Model':
-        model=SimpleSeaReader(dataset_h5_path,device)
+    if model_choose == 'MedQA-Model':
+        model = SimpleSeaReader(dataset_h5_path, device)
     elif model_choose == 'base':
         model_config = read_config('config/base_model.yaml')
-        model = BaseModel(dataset_h5_path,model_config)
+        model = BaseModel(dataset_h5_path, model_config)
     elif model_choose == 'match-lstm':
         model = MatchLSTM(dataset_h5_path)
     elif model_choose == 'match-lstm+':
@@ -71,7 +75,7 @@ def train(config_path):
 
     model = model.to(device)
     # criterion = MyNLLLoss()
-    criterion = CrossEntropyLoss(weight=torch.tensor([0.2,0.8]).to(device)).to(device)
+    criterion = CrossEntropyLoss(weight=torch.tensor([0.2, 0.8]).to(device)).to(device)
 
     # optimizer
     optimizer_choose = global_config['train']['optimizer']
@@ -83,7 +87,7 @@ def train(config_path):
     elif optimizer_choose == 'adadelta':
         optimizer = optim.Adadelta(optimizer_param)
     elif optimizer_choose == 'adam':
-        optimizer = optim.Adam(optimizer_param,lr=optimizer_lr)
+        optimizer = optim.Adam(optimizer_param, lr=optimizer_lr)
     elif optimizer_choose == 'sgd':
         optimizer = optim.SGD(optimizer_param,
                               lr=optimizer_lr)
@@ -103,7 +107,7 @@ def train(config_path):
         model.load_state_dict(weight, strict=False)
 
     # training arguments
-    logger.info('start training...')
+    logger.info('start training............................................')
     train_batch_size = global_config['train']['batch_size']
     valid_batch_size = global_config['train']['valid_batch_size']
 
@@ -118,49 +122,61 @@ def train(config_path):
             model_choose == 'base' and model_config['encoder']['enable_char']):
         enable_char = True
 
-    best_valid_f1 = None
+    # tensorboardX writer
+    cur_time = time.strftime('%Y-%m-%d-%H_%M_%S', time.localtime())
+    host_name = socket.gethostname()
+    writer_info = host_name + "_" + cur_time
+    tensorboard_writer = SummaryWriter(comment='**' + writer_info)
+
+    best_valid_acc = None
     # every epoch
     for epoch in range(global_config['train']['epoch']):
         # train
         model.train()  # set training = True, make sure right dropout
-        sum_loss, avg_loss = train_on_model(model=model,
-                                  criterion=criterion,
-                                  optimizer=optimizer,
-                                  batch_data=batch_train_data,
-                                  epoch=epoch,
-                                  clip_grad_max=clip_grad_max,
-                                  device=device,
-                                  enable_char=enable_char,
-                                  batch_char_func=dataset.gen_batch_with_char)
-        logger.info('epoch=%d, sum_loss=%.5f' % (epoch, sum_loss))
+        train_avg_loss, train_avg_binary_acc, train_avg_problem_acc = train_on_model(model=model,
+                                                                                     criterion=criterion,
+                                                                                     optimizer=optimizer,
+                                                                                     batch_data=batch_train_data,
+                                                                                     epoch=epoch,
+                                                                                     clip_grad_max=clip_grad_max,
+                                                                                     device=device,
+                                                                                     enable_char=enable_char,
+                                                                                     batch_char_func=dataset.gen_batch_with_char)
 
-        # # evaluate
-        # with torch.no_grad():
-        #     model.eval()  # let training = False, make sure right dropout
-        #     valid_score_em, valid_score_f1, valid_loss = eval_on_model(model=model,
-        #                                                                criterion=criterion,
-        #                                                                batch_data=batch_dev_data,
-        #                                                                epoch=epoch,
-        #                                                                device=device,
-        #                                                                enable_char=enable_char,
-        #                                                                batch_char_func=dataset.gen_batch_with_char)
-        # logger.info("epoch=%d, ave_score_em=%.2f, ave_score_f1=%.2f, sum_loss=%.5f" %
-        #             (epoch, valid_score_em, valid_score_f1, valid_loss))
-        #
-        #
-        # # save model when best f1 score
-        # if best_valid_f1 is None or valid_score_f1 > best_valid_f1:
-        #     save_model(model,
-        #                epoch=epoch,
-        #                model_weight_path=global_config['data']['model_path'],
-        #                checkpoint_path=global_config['data']['checkpoint_path'])
-        #     logger.info("saving model weight on epoch=%d" % epoch)
-        #     best_valid_f1 = valid_score_f1
+        # evaluate
+        with torch.no_grad():
+            model.eval()  # let training = False, make sure right dropout
+            val_avg_loss, val_avg_binary_acc, val_avg_problem_acc = eval_on_model(model=model,
+                                                                                  criterion=criterion,
+                                                                                  batch_data=batch_dev_data,
+                                                                                  epoch=epoch,
+                                                                                  device=device,
+                                                                                  enable_char=enable_char,
+                                                                                  batch_char_func=dataset.gen_batch_with_char)
+
+        # save model when best f1 score
+        if best_valid_acc is None or val_avg_problem_acc > best_valid_acc:
+            epoch_info = 'epoch=%d, val_binary_acc=%.4f, val_problem_acc=%.4f' % (epoch,val_avg_binary_acc,val_avg_problem_acc)
+            save_model(model,
+                       epoch_info=epoch_info,
+                       model_weight_path=global_config['data']['model_path'],
+                       checkpoint_path=global_config['data']['checkpoint_path'])
+            logger.info("saving model weight on epoch=%d  ================" % epoch)
+            best_valid_acc = val_avg_problem_acc
+
+        tensorboard_writer.add_scalar("lr", optimizer.param_groups[0]['lr'], epoch)
+        tensorboard_writer.add_scalar("train/avg_loss", train_avg_loss, epoch)
+        tensorboard_writer.add_scalar("train/binary_acc", train_avg_binary_acc, epoch)
+        tensorboard_writer.add_scalar("train/problem_acc", train_avg_problem_acc, epoch)
+        tensorboard_writer.add_scalar("val/avg_loss", val_avg_loss, epoch)
+        tensorboard_writer.add_scalar("val/binary_acc", val_avg_binary_acc, epoch)
+        tensorboard_writer.add_scalar("val/problem_acc", val_avg_problem_acc, epoch)
 
         # adjust learning rate
-        scheduler.step(avg_loss)
+        scheduler.step(val_avg_loss)
 
     logger.info('finished.')
+    tensorboard_writer.close()
 
 
 def train_on_model(model, criterion, optimizer, batch_data, epoch, clip_grad_max, device, enable_char, batch_char_func):
@@ -177,23 +193,21 @@ def train_on_model(model, criterion, optimizer, batch_data, epoch, clip_grad_max
     :param device:
     :return:
     """
-    epoch_loss=AverageMeter()
+    epoch_loss = AverageMeter()
+    epoch_binary_acc = AverageMeter()
+    epoch_problem_acc = AverageMeter()
     batch_cnt = len(batch_data)
-    sum_loss = 0.
-    for i, batch in enumerate(batch_data,0):
+    for i, batch in enumerate(batch_data, 0):
         optimizer.zero_grad()
-
         # batch data
         # bat_context, bat_question, bat_context_char, bat_question_char, bat_answer_range = batch_char_func(batch, enable_char=enable_char, device=device)
-
-        contents,question_ans,sample_labels,sample_ids=batch
-        contents=contents.to(device)
-        question_ans=question_ans.to(device)
-        sample_labels=sample_labels.to(device)
-        #contents:batch_size*10*200,  question_ans:batch_size*100  ,sample_labels=batchsize
-
+        contents, question_ans, sample_labels, sample_ids = batch
+        contents = contents.to(device)
+        question_ans = question_ans.to(device)
+        sample_labels = sample_labels.to(device)
+        # contents:batch_size*10*200,  question_ans:batch_size*100  ,sample_labels=batchsize
         # forward
-        pred_labels = model.forward(contents, question_ans) # pred_labels size=(batch,1)
+        pred_labels = model.forward(contents, question_ans)  # pred_labels size=(batch,1)
 
         # get loss
         loss = criterion.forward(pred_labels, sample_labels)
@@ -205,22 +219,29 @@ def train_on_model(model, criterion, optimizer, batch_data, epoch, clip_grad_max
 
         # logging
         batch_loss = loss.item()
-        epoch_loss.update(batch_loss,len(sample_ids))
-        sum_loss += batch_loss * len(sample_ids)
+        epoch_loss.update(batch_loss, len(sample_ids))
 
-        logger.info('epoch=%d, batch=%d/%d, loss=%.5f' % (epoch, i, batch_cnt, batch_loss))
+        binary_acc = compute_binary_accuracy(pred_labels.data, sample_labels.data)
+        problem_acc = compute_problems_accuracy(pred_labels.data, sample_labels.data, sample_ids)
+
+        epoch_binary_acc.update(binary_acc, len(sample_ids))
+        epoch_problem_acc.update(problem_acc, int(len(sample_ids) / 5))
+
+        logger.info('epoch=%d, batch=%d/%d, loss=%.5f binary_acc=%.4f problem_acc=%.4f' % (
+            epoch, i, batch_cnt, batch_loss, binary_acc, problem_acc))
 
         # manual release memory, todo: really effect?
-        del contents,question_ans,sample_labels,sample_ids
+        del contents, question_ans, sample_labels, sample_ids
         del pred_labels, loss
-
         # torch.cuda.empty_cache()
+    logger.info(
+        '===== epoch=%d, batch_count=%d, epoch_average_loss=%.5f, avg_binary_acc=%.4f, avg_problem_acc=%.4f ====' % (
+            epoch, batch_cnt, epoch_loss.avg, epoch_binary_acc.avg, epoch_problem_acc.avg))
 
-    logger.info('===== epoch=%d, batch_count=%d, epoch_sum_loss=%.5f, epoch_average_loss=%.5f ====' % (epoch, batch_cnt, epoch_loss.sum,epoch_loss.avg))
-    return sum_loss ,epoch_loss.avg
+    return epoch_loss.avg, epoch_binary_acc.avg, epoch_problem_acc.avg
 
 
-def save_model(model, epoch, model_weight_path, checkpoint_path):
+def save_model(model, epoch_info, model_weight_path, checkpoint_path):
     """
     save model weight without embedding
     :param model:
@@ -234,15 +255,49 @@ def save_model(model, epoch, model_weight_path, checkpoint_path):
     del model_weight['embedding.embedding_layer.weight']
 
     torch.save(model_weight, model_weight_path)
-
     with open(checkpoint_path, 'w') as checkpoint_f:
-        checkpoint_f.write('epoch=%d' % epoch)
+        checkpoint_f.write(epoch_info+"\n")
+
+
+def compute_binary_accuracy(pred_labels, real_labels):
+    pred_labels = torch.argmax(pred_labels, dim=1)  # 得到一个16*1的矩阵，
+    difference = torch.abs(pred_labels - real_labels)
+    accuracy = 1.0 - torch.mean(difference.float())
+    return accuracy
+
+
+def compute_problems_accuracy(pred_labels, real_labels, sample_ids):
+    check_flag = True
+    problem_num = int(real_labels.size()[0] / 5)
+    # 检查是不是每5个sample都是属于一个问题的
+    for i in range(problem_num):
+        problem_id = sample_ids[i * 5].split("_")[0]
+        for j in range(5):
+            cur_pro_id = sample_ids[i * 5 + j].split("_")[0]
+            if (cur_pro_id != problem_id):
+                check_flag = False
+                break
+    if check_flag:
+        softmax_score = torch.nn.functional.softmax(pred_labels, dim=1)
+        confidence = softmax_score[:, 1] - softmax_score[:, 0]
+        problem_wise_confidence = confidence.resize_(problem_num, 5)
+        max_idx = torch.argmax(problem_wise_confidence, dim=1)
+        new_labels = torch.zeros(problem_num, 5).to(torch.device("cuda"))
+        new_labels[range(problem_num), max_idx] = 1
+        real_labels = real_labels.resize_(problem_num, 5).float()
+        error = torch.abs(real_labels - new_labels)
+        accuracy = 1.0 - (torch.mean(error.float()) * 5 / 2)
+        return accuracy
+    else:
+        logging.info("check problem groups failed")
+        return 0
 
 
 class AverageMeter(object):
     """
     Computes and stores the average and current value.
     """
+
     def __init__(self):
         self.reset()
 

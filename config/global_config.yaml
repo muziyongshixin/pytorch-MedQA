@@ -22,9 +22,9 @@ global:
   model: MedQA-Model #match-lstm+ # 'match-lstm', 'match-lstm+', 'r-net' or 'base'. Note that 'base' model is customized by base_model.yaml
 
 train:
-  batch_size: 128  #default 32     | 16 大约占用显存3G~5G左右
-  valid_batch_size: 16 #default 32
-  epoch: 30
+  batch_size: 400  #最好是5的倍数，便于计算准确率
+  valid_batch_size: 400 #default 32
+  epoch: 100
   enable_cuda: True
 
   optimizer: 'adam'  # adam, sgd, adamax, adadelta(default is adamax)

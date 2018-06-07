@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import socket
+import time
 
 __author__ = 'han'
 
@@ -31,6 +33,10 @@ parser.add_argument('--output', '-o', required=False, dest='out_path')
 args = parser.parse_args()
 
 
+cur_time = time.strftime('%Y-%m-%d-%H_%M_%S', time.localtime())
+host_name = socket.gethostname()
+experiment_info = host_name + "_" + cur_time
+logger.info('========================  %s  ================================='%experiment_info)
 if args.mode == 'preprocess':
     preprocess(args.config_path)
 elif args.mode == 'train':

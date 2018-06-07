@@ -83,7 +83,7 @@ class MedQADataset:
                               to_long_tensor(data["samples_labels"]))
         dataloader = torch.utils.data.DataLoader(dataset,
                                                  batch_size=batch_size,
-                                                 shuffle=True)
+                                                 shuffle=False)
         return dataloader
 
     def get_batch_train(self, batch_size):

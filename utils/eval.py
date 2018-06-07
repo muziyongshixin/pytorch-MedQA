@@ -1,14 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
-__author__ = 'han'
-
+import time
 import torch
 import logging
 from dataset.preprocess_data import PreprocessData
 
 logger = logging.getLogger(__name__)
-
 
 def eval_on_model(model, criterion, batch_data, epoch, device, enable_char, batch_char_func):
     """
@@ -22,107 +19,100 @@ def eval_on_model(model, criterion, batch_data, epoch, device, enable_char, batc
     :param device:
     :return: (em, f1, sum_loss)
     """
+
+    epoch_loss = AverageMeter()
+    epoch_binary_acc = AverageMeter()
+    epoch_problem_acc = AverageMeter()
     batch_cnt = len(batch_data)
-    dev_data_size = 0
-    num_em = 0
-    score_f1 = 0.
-    sum_loss = 0.
-
-    for bnum, batch in enumerate(batch_data):
-
+    start_time=time.time()
+    for i, batch in enumerate(batch_data, 0):
         # batch data
-        bat_context, bat_question, bat_context_char, bat_question_char, bat_answer_range = \
-            batch_char_func(batch, enable_char=enable_char, device=device)
-
-        tmp_ans_prop, tmp_ans_range, _ = model.forward(bat_context, bat_question, bat_context_char, bat_question_char)
-
-        tmp_size = bat_answer_range.shape[0]
-        dev_data_size += tmp_size
-
+        contents, question_ans, sample_labels, sample_ids = batch
+        contents = contents.to(device)
+        question_ans = question_ans.to(device)
+        sample_labels = sample_labels.to(device)
+        # contents:batch_size*10*200,  question_ans:batch_size*100  ,sample_labels=batchsize
+        # forward
+        pred_labels = model.forward(contents, question_ans)  # pred_labels size=(batch,1)
         # get loss
-        batch_loss = criterion.forward(tmp_ans_prop, bat_answer_range[:, 0:2])
-        sum_loss += batch_loss.item() * tmp_size
+        loss = criterion.forward(pred_labels, sample_labels)
+        # logging
+        batch_loss = loss.item()
+        epoch_loss.update(batch_loss, len(sample_ids))
 
-        # calculate the mean em and f1 score
-        for i in range(tmp_size):
-            if evaluate_em(tmp_ans_range[i].cpu().numpy(), bat_answer_range[i].cpu().numpy()):
-                num_em += 1
-            score_f1 += evaluate_f1(bat_context[i].cpu().numpy(),
-                                    tmp_ans_range[i].cpu().numpy(),
-                                    bat_answer_range[i].cpu().numpy())
-        if epoch is None:
-            logger.info('test: batch=%d/%d, cur_score_em=%.2f, cur_score_f1=%.2f, batch_loss=%.5f' %
-                        (bnum, batch_cnt, num_em * 1. / dev_data_size, score_f1 / dev_data_size, batch_loss))
-        else:
-            logger.info('epoch=%d, batch=%d/%d, cur_score_em=%.2f, cur_score_f1=%.2f, batch_loss=%.5f' %
-                        (epoch, bnum, batch_cnt, num_em * 1. / dev_data_size, score_f1 / dev_data_size, batch_loss))
+        binary_acc = compute_binary_accuracy(pred_labels, sample_labels)
+        problem_acc = compute_problems_accuracy(pred_labels, sample_labels, sample_ids)
+
+        epoch_binary_acc.update(binary_acc, len(sample_ids))
+        epoch_problem_acc.update(problem_acc, int(len(sample_ids) / 5))
+
+        logger.info('epoch=%d, batch=%d/%d, loss=%.5f binary_acc=%.4f problem_acc=%.4f' % (
+            epoch, i, batch_cnt, batch_loss, binary_acc, problem_acc))
 
         # manual release memory, todo: really effect?
-        del bat_context, bat_question, bat_answer_range, bat_context_char, bat_question_char
-        del tmp_ans_prop, tmp_ans_range, batch_loss
+        del contents, question_ans, sample_labels, sample_ids
+        del pred_labels, loss
         # torch.cuda.empty_cache()
 
-    score_em = num_em * 100.0 / dev_data_size
-    score_f1 = score_f1 * 100.0 / dev_data_size
+    eval_time=time.time()-start_time
+    logger.info(
+        '===== epoch=%d, batch_count=%d, epoch_average_loss=%.5f, avg_binary_acc=%.4f, avg_problem_acc=%.4f, eval_time=%.1f====' % (
+            epoch, batch_cnt, epoch_loss.avg, epoch_binary_acc.avg, epoch_problem_acc.avg,eval_time))
 
-    logger.info("eval data size: %d" % dev_data_size)
-    return score_em, score_f1, sum_loss
-
-
-# ---------------------------------------------------------------------------------
-# Here is the two evaluate function modified from standard file 'evaluate-v1.1.py'.
-# We just use it to show how model effect during training or evaluating.
-# If you want the standard score, please use 'test.py' to output answer json file
-# and then use 'evaluate-v1.1.py' to evaluate
-# ---------------------------------------------------------------------------------
-
-def evaluate_em(y_pred, y_true):
-    """
-    exact match score
-    :param y_pred: (answer_len,)
-    :param y_true: (condidate_answer_len,)
-    :return: bool
-    """
-    answer_len = 2
-    candidate_answer_size = int(len(y_true)/answer_len)
-
-    for i in range(candidate_answer_size):
-        if (y_true[(i * 2):(i * 2 + 2)] == y_pred).all():
-            return True
-
-    return False
+    return epoch_loss.avg, epoch_binary_acc.avg, epoch_problem_acc.avg
 
 
-def evaluate_f1(context_tokens, y_pred, y_true):
-    """
-    treat answer as bag of tokens, calculate F1 score
-    :param context_tokens: context with word tokens
-    :param y_pred: (answer_len,)
-    :param y_true: (condidate_answer_len,)
-    :return: float
-    """
-    answer_len = 2
-    candidate_answer_size = int(len(y_true) / answer_len)
+def compute_binary_accuracy(pred_labels, real_labels):
+    pred_labels = torch.argmax(pred_labels, dim=1)  # 得到一个16*1的矩阵，
+    difference = torch.abs(pred_labels - real_labels)
+    accuracy = 1.0 - torch.mean(difference.float())
+    return accuracy
 
-    pred_tokens = set(context_tokens[y_pred[0]:y_pred[1]+1])
-    if len(pred_tokens) == 0:
+
+def compute_problems_accuracy(pred_labels, real_labels, sample_ids):
+    check_flag = True
+    problem_num = int(real_labels.size()[0] / 5)
+    # 检查是不是每5个sample都是属于一个问题的
+    for i in range(problem_num):
+        problem_id = sample_ids[i * 5].split("_")[0]
+        for j in range(5):
+            cur_pro_id = sample_ids[i * 5 + j].split("_")[0]
+            if (cur_pro_id != problem_id):
+                check_flag = False
+                break
+
+    if check_flag:
+        softmax_score = torch.nn.functional.softmax(pred_labels, dim=1)
+        confidence = softmax_score[:, 1] - softmax_score[:, 0]
+        problem_wise_confidence = confidence.resize_(problem_num, 5)
+        max_idx = torch.argmax(problem_wise_confidence, dim=1)
+        new_labels = torch.zeros(problem_num, 5).to(torch.device("cuda"))
+        new_labels[range(problem_num), max_idx] = 1
+        real_labels = real_labels.resize_(problem_num, 5).float()
+        error = torch.abs(real_labels - new_labels)
+        accuracy = 1.0 - (torch.mean(error.float()) * 5 / 2)
+        return accuracy
+    else:
+        logging.info("check problem groups failed")
         return 0
 
-    all_f1 = []
-    for i in range(candidate_answer_size):
-        tmp_true = y_true[(i * 2):(i * 2 + 2)]
-        if tmp_true[0] == PreprocessData.answer_padding_idx:
-            continue
 
-        true_tokens = set(context_tokens[tmp_true[0]:tmp_true[1]+1])
-        same_tokens = pred_tokens.intersection(true_tokens)
+class AverageMeter(object):
+    """
+    Computes and stores the average and current value.
+    """
 
-        precision = len(same_tokens) * 1. / len(pred_tokens)
-        recall = len(same_tokens) * 1. / len(true_tokens)
+    def __init__(self):
+        self.reset()
 
-        f1 = 0
-        if precision + recall > 0:
-            f1 = 2 * precision * recall / (precision + recall)
-        all_f1.append(f1)
+    def reset(self):
+        self.val = 0
+        self.avg = 0
+        self.sum = 0
+        self.count = 0
 
-    return max(all_f1)
+    def update(self, val, n=1):
+        self.val = val
+        self.sum += val * n
+        self.count += n
+        self.avg = self.sum / self.count

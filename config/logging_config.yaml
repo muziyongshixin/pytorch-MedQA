@@ -16,7 +16,7 @@ handlers:
         level: DEBUG
         formatter: simple
         filename: logs/debug.log
-        maxBytes: 30485760 # 30MB
+        maxBytes: 100485760 # 100MB
         backupCount: 20
         encoding: utf8
     time_file_handler:
