@@ -43,8 +43,8 @@ def eval_on_model(model, criterion, batch_data, epoch, device, enable_char, batc
         binary_acc = compute_binary_accuracy(pred_labels, sample_labels)
         problem_acc = compute_problems_accuracy(pred_labels, sample_labels, sample_ids)
 
-        epoch_binary_acc.update(binary_acc, len(sample_ids))
-        epoch_problem_acc.update(problem_acc, int(len(sample_ids) / 5))
+        epoch_binary_acc.update(binary_acc.item(), len(sample_ids))
+        epoch_problem_acc.update(problem_acc.item(), int(len(sample_ids) / 5))
 
         logger.info('epoch=%d, batch=%d/%d, loss=%.5f binary_acc=%.4f problem_acc=%.4f' % (
             epoch, i, batch_cnt, batch_loss, binary_acc, problem_acc))

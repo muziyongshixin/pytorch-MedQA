@@ -156,12 +156,13 @@ def train(config_path):
 
         # save model when best f1 score
         if best_valid_acc is None or val_avg_problem_acc > best_valid_acc:
-            epoch_info = 'epoch=%d, val_binary_acc=%.4f, val_problem_acc=%.4f' % (epoch,val_avg_binary_acc,val_avg_problem_acc)
+            epoch_info = 'epoch=%d, val_binary_acc=%.4f, val_problem_acc=%.4f' % (
+            epoch, val_avg_binary_acc, val_avg_problem_acc)
             save_model(model,
                        epoch_info=epoch_info,
                        model_weight_path=global_config['data']['model_path'],
                        checkpoint_path=global_config['data']['checkpoint_path'])
-            logger.info("saving model weight on epoch=%d  ================" % epoch)
+            logger.info("=========  saving model weight on epoch=%d  =======" % epoch)
             best_valid_acc = val_avg_problem_acc
 
         tensorboard_writer.add_scalar("lr", optimizer.param_groups[0]['lr'], epoch)
@@ -224,8 +225,8 @@ def train_on_model(model, criterion, optimizer, batch_data, epoch, clip_grad_max
         binary_acc = compute_binary_accuracy(pred_labels.data, sample_labels.data)
         problem_acc = compute_problems_accuracy(pred_labels.data, sample_labels.data, sample_ids)
 
-        epoch_binary_acc.update(binary_acc, len(sample_ids))
-        epoch_problem_acc.update(problem_acc, int(len(sample_ids) / 5))
+        epoch_binary_acc.update(binary_acc.item(), len(sample_ids))
+        epoch_problem_acc.update(problem_acc.item(), int(len(sample_ids) / 5))
 
         logger.info('epoch=%d, batch=%d/%d, loss=%.5f binary_acc=%.4f problem_acc=%.4f' % (
             epoch, i, batch_cnt, batch_loss, binary_acc, problem_acc))
@@ -256,7 +257,7 @@ def save_model(model, epoch_info, model_weight_path, checkpoint_path):
 
     torch.save(model_weight, model_weight_path)
     with open(checkpoint_path, 'w') as checkpoint_f:
-        checkpoint_f.write(epoch_info+"\n")
+        checkpoint_f.write(epoch_info + "\n")
 
 
 def compute_binary_accuracy(pred_labels, real_labels):
