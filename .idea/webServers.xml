@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="2ac3202c-ac91-4c57-82a2-7a82b695c6df" name="panda5@pc" url="http://pc.liyongzhi.xyz">
+        <fileTransfer host="pc.liyongzhi.xyz" port="10055" accessType="SFTP">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" />
+          </advancedOptions>
+          <option name="port" value="10055" />
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>

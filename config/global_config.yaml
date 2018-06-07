@@ -1,0 +1,37 @@
+data:
+  dataset:
+    train_path: data/MedQA/new_train_59959.json
+    dev_path: data/MedQA/new_dev_5135.json
+    test_path: data/MedQA/new_test_600.json
+  dataset_h5: data/MedQA_word2vec.h5  #保存预处理的数据，embedding，w2id等
+  ignore_max_len: 200 # in train data, context token len > ignore_max_len will be dropped
+  ignore_max_ques_ans_len: 100
+
+  embedding_path: data/word2vec_embedding   # data/glove.840B.300d.zip
+  vocabulary_path: data/vocabulary
+
+  model_path: checkpoint/model-weight.pt
+  checkpoint_path: checkpoint/checkpoint
+
+model:
+  encoder:
+    word_embedding_size: 200
+
+global:
+  random_seed: 123
+  model: MedQA-Model #match-lstm+ # 'match-lstm', 'match-lstm+', 'r-net' or 'base'. Note that 'base' model is customized by base_model.yaml
+
+train:
+  batch_size: 128  #default 32     | 16 大约占用显存3G~5G左右
+  valid_batch_size: 16 #default 32
+  epoch: 30
+  enable_cuda: True
+
+  optimizer: 'adam'  # adam, sgd, adamax, adadelta(default is adamax)
+  learning_rate: 0.0001  # only for sgd
+  clip_grad_norm: 5
+
+test:
+  batch_size: 32
+  enable_cuda: True
+
