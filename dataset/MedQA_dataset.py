@@ -53,23 +53,23 @@ class MedQADataset:
             self.__meta_data['id2char'] = np.array(f['meta_data']['id2char'])
         self.__meta_data['char2id'] = dict(zip(self.__meta_data['id2char'],range(len(self.__meta_data['id2char']))))
 
-    def get_dataloader_train(self, batch_size):
+    def get_dataloader_train(self, batch_size,shuffle):
         """
         a train data dataloader
         :param batch_size:
         :return:
         """
-        return self.get_dataloader(batch_size, 'train')
+        return self.get_dataloader(batch_size, 'train',shuffle)
 
-    def get_dataloader_dev(self, batch_size):
+    def get_dataloader_dev(self, batch_size,shuffle):
         """
         a dev data dataloader
         :param batch_size:
         :return:
         """
-        return self.get_dataloader(batch_size, 'dev')
+        return self.get_dataloader(batch_size, 'dev',shuffle)
 
-    def get_dataloader(self, batch_size, type):
+    def get_dataloader(self, batch_size, type, shuffle=True):
         """
         get dataloader on train or dev dataset
         :param batch_size:
@@ -83,7 +83,7 @@ class MedQADataset:
                               to_long_tensor(data["samples_labels"]))
         dataloader = torch.utils.data.DataLoader(dataset,
                                                  batch_size=batch_size,
-                                                 shuffle=False)
+                                                 shuffle=shuffle)
         return dataloader
 
     def get_batch_train(self, batch_size):

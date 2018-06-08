@@ -2,8 +2,13 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="379b3c50-c63d-4abf-8907-779f9aeead13" name="Default" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
+      <change beforePath="$PROJECT_DIR$/config/global_config.yaml" afterPath="$PROJECT_DIR$/config/global_config.yaml" />
+      <change beforePath="$PROJECT_DIR$/dataset/MedQA_dataset.py" afterPath="$PROJECT_DIR$/dataset/MedQA_dataset.py" />
+      <change beforePath="$PROJECT_DIR$/models/SimpleSeaReader.py" afterPath="$PROJECT_DIR$/models/SimpleSeaReader.py" />
+      <change beforePath="$PROJECT_DIR$/run.py" afterPath="$PROJECT_DIR$/run.py" />
       <change beforePath="$PROJECT_DIR$/train.py" afterPath="$PROJECT_DIR$/train.py" />
-      <change beforePath="$PROJECT_DIR$/utils/eval.py" afterPath="$PROJECT_DIR$/utils/eval.py" />
+      <change beforePath="$PROJECT_DIR$/utils/load_config.py" afterPath="$PROJECT_DIR$/utils/load_config.py" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -21,11 +26,34 @@
       <file leaf-file-name="train.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/train.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="408">
-              <caret line="173" column="48" lean-forward="false" selection-start-line="173" selection-start-column="48" selection-end-line="173" selection-end-column="48" />
+            <state relative-caret-position="422">
+              <caret line="173" column="37" lean-forward="false" selection-start-line="173" selection-start-column="37" selection-end-line="173" selection-end-column="37" />
               <folding>
                 <element signature="e#46#59#0" expanded="true" />
-                <element signature="e#8523#8772#1" expanded="false" />
+                <element signature="e#8472#8721#1" expanded="false" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="MedQA_dataset.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/dataset/MedQA_dataset.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="202">
+              <caret line="71" column="59" lean-forward="false" selection-start-line="71" selection-start-column="59" selection-end-line="71" selection-end-column="59" />
+              <folding>
+                <element signature="e#4287#4455#0" expanded="false" />
+                <element signature="e#4512#4762#0" expanded="false" />
+                <element signature="e#4817#5063#0" expanded="false" />
+                <element signature="e#5123#5802#0" expanded="false" />
+                <element signature="e#5880#7338#0" expanded="false" />
+                <element signature="e#7386#7599#0" expanded="false" />
+                <element signature="e#7644#7944#0" expanded="false" />
+                <element signature="e#7988#8068#0" expanded="false" />
+                <element signature="e#8109#8377#0" expanded="false" />
+                <element signature="e#8436#8775#0" expanded="false" />
+                <element signature="e#8841#10184#0" expanded="false" />
+                <element signature="e#10251#11361#0" expanded="false" />
               </folding>
             </state>
           </provider>
@@ -34,7 +62,7 @@
       <file leaf-file-name="writer.py" pinned="false" current-in-tab="false">
         <entry file="file://D:/software/anaconda/Lib/site-packages/tensorboardX/writer.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="372">
+            <state relative-caret-position="1500">
               <caret line="74" column="33" lean-forward="false" selection-start-line="74" selection-start-column="26" selection-end-line="74" selection-end-column="33" />
               <folding />
             </state>
@@ -44,7 +72,7 @@
       <file leaf-file-name="eval.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/utils/eval.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="500">
+            <state relative-caret-position="875">
               <caret line="45" column="49" lean-forward="false" selection-start-line="45" selection-start-column="42" selection-end-line="45" selection-end-column="49" />
               <folding>
                 <element signature="e#46#57#0" expanded="true" />
@@ -57,19 +85,34 @@
       <file leaf-file-name="global_config.yaml" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/config/global_config.yaml">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="150">
-              <caret line="12" column="40" lean-forward="true" selection-start-line="12" selection-start-column="40" selection-end-line="12" selection-end-column="40" />
+            <state relative-caret-position="600">
+              <caret line="24" column="28" lean-forward="false" selection-start-line="24" selection-start-column="28" selection-end-line="24" selection-end-column="28" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="checkpoint" pinned="true" current-in-tab="false">
-        <entry file="remoteDeploymentFS://&lt;2ac3202c-ac91-4c57-82a2-7a82b695c6df&gt;/m/liyz/MedQA-workspace/v1.0/checkpoint/checkpoint">
+      <file leaf-file-name="logging_config.yaml" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/config/logging_config.yaml">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="0">
-              <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+            <state relative-caret-position="750">
+              <caret line="30" column="22" lean-forward="false" selection-start-line="30" selection-start-column="4" selection-end-line="30" selection-end-column="22" />
               <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="SimpleSeaReader.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/models/SimpleSeaReader.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="1825">
+              <caret line="82" column="60" lean-forward="false" selection-start-line="82" selection-start-column="60" selection-end-line="82" selection-end-column="60" />
+              <folding>
+                <element signature="e#68#80#0" expanded="true" />
+                <element signature="e#1564#1634#0" expanded="false" />
+                <element signature="e#3922#3983#0" expanded="false" />
+                <element signature="e#5947#5948#0" expanded="false" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -142,13 +185,13 @@
         <option value="$PROJECT_DIR$/models/layers.py" />
         <option value="$PROJECT_DIR$/models/SeaReader.py" />
         <option value="$PROJECT_DIR$/models/__init__.py" />
-        <option value="$PROJECT_DIR$/models/SimpleSeaReader.py" />
-        <option value="$PROJECT_DIR$/dataset/MedQA_dataset.py" />
         <option value="$PROJECT_DIR$/config/logging_config.yaml" />
-        <option value="$PROJECT_DIR$/run.py" />
-        <option value="$PROJECT_DIR$/utils/load_config.py" />
-        <option value="$PROJECT_DIR$/config/global_config.yaml" />
         <option value="$PROJECT_DIR$/utils/eval.py" />
+        <option value="$PROJECT_DIR$/models/SimpleSeaReader.py" />
+        <option value="$PROJECT_DIR$/config/global_config.yaml" />
+        <option value="$PROJECT_DIR$/dataset/MedQA_dataset.py" />
+        <option value="$PROJECT_DIR$/utils/load_config.py" />
+        <option value="$PROJECT_DIR$/run.py" />
         <option value="$PROJECT_DIR$/train.py" />
       </list>
     </option>
@@ -159,11 +202,11 @@
     <detection-done>true</detection-done>
     <sorting>DEFINITION_ORDER</sorting>
   </component>
-  <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="-61" />
-    <option name="y" value="-1106" />
-    <option name="width" value="1936" />
-    <option name="height" value="1050" />
+  <component name="ProjectFrameBounds" extendedState="7">
+    <option name="x" value="-9" />
+    <option name="y" value="-9" />
+    <option name="width" value="1938" />
+    <option name="height" value="1060" />
   </component>
   <component name="ProjectView">
     <navigator currentView="ProjectPane" proportions="" version="1">
@@ -327,7 +370,8 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="2" y="-1089" width="1938" height="1060" extended-state="6" />
+    <frame x="-9" y="-9" width="1938" height="1060" extended-state="7" />
+    <editor active="true" />
     <layout>
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
@@ -336,8 +380,8 @@
       <window_info id="Python Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3295838" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.22834645" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3295838" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="Remote Host" active="true" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.24946351" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.17650215" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Remote Host" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.21512875" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.17864807" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="Docker" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Database" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="SciView" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
@@ -613,7 +657,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="544">
           <caret line="53" column="8" lean-forward="false" selection-start-line="53" selection-start-column="8" selection-end-line="53" selection-end-column="8" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -621,7 +664,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="1750">
           <caret line="75" column="30" lean-forward="false" selection-start-line="75" selection-start-column="23" selection-end-line="75" selection-end-column="30" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -633,34 +675,12 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/dataset/MedQA_dataset.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="252">
-          <caret line="70" column="0" lean-forward="true" selection-start-line="70" selection-start-column="0" selection-end-line="70" selection-end-column="0" />
-          <folding>
-            <element signature="e#49#58#0" expanded="false" />
-            <element signature="e#4239#4407#0" expanded="false" />
-            <element signature="e#4464#4714#0" expanded="false" />
-            <element signature="e#4769#5015#0" expanded="false" />
-            <element signature="e#5075#5754#0" expanded="false" />
-            <element signature="e#5832#7290#0" expanded="false" />
-            <element signature="e#7338#7551#0" expanded="false" />
-            <element signature="e#7596#7896#0" expanded="false" />
-            <element signature="e#7940#8020#0" expanded="false" />
-            <element signature="e#8061#8329#0" expanded="false" />
-            <element signature="e#8388#8727#0" expanded="false" />
-            <element signature="e#8793#10136#0" expanded="false" />
-            <element signature="e#10203#11313#0" expanded="false" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/models/layers.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="-110">
           <caret line="741" column="8" lean-forward="false" selection-start-line="741" selection-start-column="8" selection-end-line="741" selection-end-column="8" />
           <folding>
-            <element signature="e#47#58#0" expanded="true" />
+            <element signature="e#47#58#0" expanded="false" />
             <element signature="e#29566#29600#0" expanded="false" />
             <element signature="e#29772#29815#0" expanded="false" />
             <element signature="e#30010#30066#0" expanded="false" />
@@ -685,63 +705,16 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/models/SimpleSeaReader.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="369">
-          <caret line="110" column="114" lean-forward="false" selection-start-line="110" selection-start-column="114" selection-end-line="110" selection-end-column="114" />
-          <folding>
-            <element signature="e#68#80#0" expanded="true" />
-            <element signature="e#1564#1634#0" expanded="false" />
-            <element signature="e#3800#3861#0" expanded="false" />
-            <element signature="e#5825#5826#0" expanded="false" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/config/logging_config.yaml">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="375">
-          <caret line="30" column="22" lean-forward="false" selection-start-line="30" selection-start-column="4" selection-end-line="30" selection-end-column="22" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/models/SeaReader.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="515">
           <caret line="214" column="0" lean-forward="false" selection-start-line="214" selection-start-column="0" selection-end-line="214" selection-end-column="0" />
-          <folding>
-            <element signature="e#68#80#0" expanded="true" />
-            <element signature="e#1552#1622#0" expanded="false" />
-            <element signature="e#4829#4890#0" expanded="false" />
-            <element signature="e#12105#12106#0" expanded="false" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/run.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="368">
-          <caret line="35" column="0" lean-forward="false" selection-start-line="35" selection-start-column="0" selection-end-line="37" selection-end-column="44" />
-          <folding>
-            <element signature="e#46#59#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/utils/load_config.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="318">
-          <caret line="21" column="40" lean-forward="false" selection-start-line="21" selection-start-column="40" selection-end-line="21" selection-end-column="40" />
-          <folding>
-            <element signature="e#46#59#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://D:/software/anaconda/Lib/site-packages/tensorboardX/writer.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="372">
+        <state relative-caret-position="1500">
           <caret line="74" column="33" lean-forward="false" selection-start-line="74" selection-start-column="26" selection-end-line="74" selection-end-column="33" />
           <folding />
         </state>
@@ -749,7 +722,7 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/utils/eval.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="500">
+        <state relative-caret-position="875">
           <caret line="45" column="49" lean-forward="false" selection-start-line="45" selection-start-column="42" selection-end-line="45" selection-end-column="49" />
           <folding>
             <element signature="e#46#57#0" expanded="true" />
@@ -758,21 +731,81 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/models/SimpleSeaReader.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1825">
+          <caret line="82" column="60" lean-forward="false" selection-start-line="82" selection-start-column="60" selection-end-line="82" selection-end-column="60" />
+          <folding>
+            <element signature="e#68#80#0" expanded="true" />
+            <element signature="e#1564#1634#0" expanded="false" />
+            <element signature="e#3922#3983#0" expanded="false" />
+            <element signature="e#5947#5948#0" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/dataset/MedQA_dataset.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="202">
+          <caret line="71" column="59" lean-forward="false" selection-start-line="71" selection-start-column="59" selection-end-line="71" selection-end-column="59" />
+          <folding>
+            <element signature="e#4287#4455#0" expanded="false" />
+            <element signature="e#4512#4762#0" expanded="false" />
+            <element signature="e#4817#5063#0" expanded="false" />
+            <element signature="e#5123#5802#0" expanded="false" />
+            <element signature="e#5880#7338#0" expanded="false" />
+            <element signature="e#7386#7599#0" expanded="false" />
+            <element signature="e#7644#7944#0" expanded="false" />
+            <element signature="e#7988#8068#0" expanded="false" />
+            <element signature="e#8109#8377#0" expanded="false" />
+            <element signature="e#8436#8775#0" expanded="false" />
+            <element signature="e#8841#10184#0" expanded="false" />
+            <element signature="e#10251#11361#0" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/config/global_config.yaml">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="150">
-          <caret line="12" column="40" lean-forward="true" selection-start-line="12" selection-start-column="40" selection-end-line="12" selection-end-column="40" />
+        <state relative-caret-position="600">
+          <caret line="24" column="28" lean-forward="false" selection-start-line="24" selection-start-column="28" selection-end-line="24" selection-end-column="28" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/config/logging_config.yaml">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="750">
+          <caret line="30" column="22" lean-forward="false" selection-start-line="30" selection-start-column="4" selection-end-line="30" selection-end-column="22" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/run.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="375">
+          <caret line="40" column="36" lean-forward="true" selection-start-line="40" selection-start-column="36" selection-end-line="40" selection-end-column="36" />
+          <folding>
+            <element signature="e#46#59#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/utils/load_config.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="125">
+          <caret line="11" column="66" lean-forward="false" selection-start-line="11" selection-start-column="52" selection-end-line="11" selection-end-column="66" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/train.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="408">
-          <caret line="173" column="48" lean-forward="false" selection-start-line="173" selection-start-column="48" selection-end-line="173" selection-end-column="48" />
+        <state relative-caret-position="422">
+          <caret line="173" column="37" lean-forward="false" selection-start-line="173" selection-start-column="37" selection-end-line="173" selection-end-column="37" />
           <folding>
             <element signature="e#46#59#0" expanded="true" />
-            <element signature="e#8523#8772#1" expanded="false" />
+            <element signature="e#8472#8721#1" expanded="false" />
           </folding>
         </state>
       </provider>

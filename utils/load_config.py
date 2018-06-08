@@ -9,7 +9,7 @@ import logging.config
 from IPython import  embed
 
 
-def init_logging(config_path='config/logging_config.yaml'):
+def init_logging(log_file_name, config_path='config/logging_config.yaml' ):
     """
     initial logging module with config
     :param config_path:
@@ -18,9 +18,8 @@ def init_logging(config_path='config/logging_config.yaml'):
     try:
         with open(config_path, 'r') as f:
             config = yaml.load(f.read())
-        cur_time = time.strftime('%Y-%m-%d-%H_%M_%S', time.localtime())
-        host_name = socket.gethostname()
-        experiment_info = "logs/"+host_name + "_" + cur_time
+
+        experiment_info = "logs/"+log_file_name
         config["handlers"]["info_file_handler"]["filename"]=experiment_info+".debug_log"
         config["handlers"]["time_file_handler"]["filename"]=experiment_info+".debug_log"
 

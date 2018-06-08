@@ -34,7 +34,7 @@ def print_network(net):
     logger.info('Total number of parameters: %d' % num_params)
 
 
-def train(config_path):
+def train(config_path,experiment_info):
     logger.info('------------MedQA v1.0 Train--------------')
     logger.info('loading config file...')
     global_config = read_config(config_path)
@@ -98,7 +98,7 @@ def train(config_path):
 
     # check if exist model weight
     weight_path = global_config['data']['model_path']
-    if os.path.exists(weight_path):
+    if os.path.exists(weight_path) and global_config['train']['continue']:
         logger.info('loading existing weight...')
         weight = torch.load(weight_path, map_location=lambda storage, loc: storage)
         if enable_cuda:
@@ -111,8 +111,8 @@ def train(config_path):
     train_batch_size = global_config['train']['batch_size']
     valid_batch_size = global_config['train']['valid_batch_size']
 
-    batch_train_data = dataset.get_dataloader_train(train_batch_size)
-    batch_dev_data = dataset.get_dataloader_dev(valid_batch_size)
+    batch_train_data = dataset.get_dataloader_train(train_batch_size,shuffle=True)
+    batch_dev_data = dataset.get_dataloader_dev(valid_batch_size,shuffle=False)
     # batch_train_data = list(dataset.get_batch_train(train_batch_size))
     # batch_dev_data = list(dataset.get_batch_dev(valid_batch_size))
 
@@ -123,17 +123,14 @@ def train(config_path):
         enable_char = True
 
     # tensorboardX writer
-    cur_time = time.strftime('%Y-%m-%d-%H_%M_%S', time.localtime())
-    host_name = socket.gethostname()
-    writer_info = host_name + "_" + cur_time
-    tensorboard_writer = SummaryWriter(comment='**' + writer_info)
+    tensorboard_writer = SummaryWriter(comment='**' + experiment_info)
 
     best_valid_acc = None
     # every epoch
     for epoch in range(global_config['train']['epoch']):
         # train
         model.train()  # set training = True, make sure right dropout
-        train_avg_loss, train_avg_binary_acc, train_avg_problem_acc = train_on_model(model=model,
+        train_avg_loss, train_avg_binary_acc = train_on_model(model=model,
                                                                                      criterion=criterion,
                                                                                      optimizer=optimizer,
                                                                                      batch_data=batch_train_data,
@@ -168,15 +165,15 @@ def train(config_path):
         tensorboard_writer.add_scalar("lr", optimizer.param_groups[0]['lr'], epoch)
         tensorboard_writer.add_scalar("train/avg_loss", train_avg_loss, epoch)
         tensorboard_writer.add_scalar("train/binary_acc", train_avg_binary_acc, epoch)
-        tensorboard_writer.add_scalar("train/problem_acc", train_avg_problem_acc, epoch)
+        # tensorboard_writer.add_scalar("train/problem_acc", train_avg_problem_acc, epoch)
         tensorboard_writer.add_scalar("val/avg_loss", val_avg_loss, epoch)
         tensorboard_writer.add_scalar("val/binary_acc", val_avg_binary_acc, epoch)
         tensorboard_writer.add_scalar("val/problem_acc", val_avg_problem_acc, epoch)
 
         # adjust learning rate
-        scheduler.step(val_avg_loss)
+        scheduler.step(train_avg_loss)
 
-    logger.info('finished.')
+    logger.info('finished.................................')
     tensorboard_writer.close()
 
 
@@ -223,23 +220,23 @@ def train_on_model(model, criterion, optimizer, batch_data, epoch, clip_grad_max
         epoch_loss.update(batch_loss, len(sample_ids))
 
         binary_acc = compute_binary_accuracy(pred_labels.data, sample_labels.data)
-        problem_acc = compute_problems_accuracy(pred_labels.data, sample_labels.data, sample_ids)
+        # problem_acc = compute_problems_accuracy(pred_labels.data, sample_labels.data, sample_ids)
 
         epoch_binary_acc.update(binary_acc.item(), len(sample_ids))
-        epoch_problem_acc.update(problem_acc.item(), int(len(sample_ids) / 5))
+        # epoch_problem_acc.update(problem_acc.item(), int(len(sample_ids) / 5))
 
-        logger.info('epoch=%d, batch=%d/%d, loss=%.5f binary_acc=%.4f problem_acc=%.4f' % (
-            epoch, i, batch_cnt, batch_loss, binary_acc, problem_acc))
+        logger.info('epoch=%d, batch=%d/%d, loss=%.5f binary_acc=%.4f ' % (
+            epoch, i, batch_cnt, batch_loss, binary_acc))
 
         # manual release memory, todo: really effect?
         del contents, question_ans, sample_labels, sample_ids
         del pred_labels, loss
         # torch.cuda.empty_cache()
     logger.info(
-        '===== epoch=%d, batch_count=%d, epoch_average_loss=%.5f, avg_binary_acc=%.4f, avg_problem_acc=%.4f ====' % (
-            epoch, batch_cnt, epoch_loss.avg, epoch_binary_acc.avg, epoch_problem_acc.avg))
+        '===== epoch=%d, batch_count=%d, epoch_average_loss=%.5f, avg_binary_acc=%.4f ====' % (
+            epoch, batch_cnt, epoch_loss.avg, epoch_binary_acc.avg))
 
-    return epoch_loss.avg, epoch_binary_acc.avg, epoch_problem_acc.avg
+    return epoch_loss.avg, epoch_binary_acc.avg
 
 
 def save_model(model, epoch_info, model_weight_path, checkpoint_path):

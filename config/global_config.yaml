@@ -22,6 +22,7 @@ global:
   model: MedQA-Model #match-lstm+ # 'match-lstm', 'match-lstm+', 'r-net' or 'base'. Note that 'base' model is customized by base_model.yaml
 
 train:
+  continue: False # 默认是不是继续上次训练
   batch_size: 400  #最好是5的倍数，便于计算准确率
   valid_batch_size: 400 #default 32
   epoch: 100

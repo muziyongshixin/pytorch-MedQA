@@ -76,9 +76,11 @@ class SimpleSeaReader(torch.nn.Module):
 
         self.decision_layer = torch.nn.Sequential(
             torch.nn.Linear(in_features=100*200*10, out_features=1000, bias=True),
+            torch.nn.Dropout(0.5),  # drop 50% of the neuron
             torch.nn.ReLU(True),
             torch.nn.BatchNorm1d(1000),
             torch.nn.Linear(in_features=1000, out_features=500, bias=True),
+            torch.nn.Dropout(0.5),  # drop 50% of the neuron
             torch.nn.ReLU(True),
             torch.nn.BatchNorm1d(500),
             torch.nn.Linear(in_features=500,out_features=2,bias=True)
