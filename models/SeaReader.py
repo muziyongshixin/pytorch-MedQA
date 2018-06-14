@@ -56,7 +56,7 @@ class SeaReader(torch.nn.Module):
         self.enable_search = True
 
         # construct model
-        self.embedding = Word2VecEmbedding(dataset_h5_path=dataset_h5_path)
+        self.embedding = Word2VecEmbedding(dataset_h5_path=dataset_h5_path,trainable= True)
         # self.char_embedding = CharEmbedding(dataset_h5_path=dataset_h5_path,
         #                                     embedding_size=char_embedding_size,
         #                                     trainable=True)
@@ -98,9 +98,15 @@ class SeaReader(torch.nn.Module):
 
 
         self.decision_layer = torch.nn.Sequential(
-            torch.nn.Linear(in_features=6040, out_features=1000, bias=True),
+            torch.nn.Linear(in_features=6552, out_features=1000, bias=True),
+            torch.nn.Dropout(0.2),  # drop 50% of the neuron
             torch.nn.ReLU(True),
-            torch.nn.Linear(in_features=1000,out_features=2,bias=True)
+            torch.nn.BatchNorm1d(1000),
+            torch.nn.Linear(in_features=1000, out_features=500, bias=True),
+            torch.nn.Dropout(0.2),  # drop 50% of the neuron
+            torch.nn.ReLU(True),
+            torch.nn.BatchNorm1d(500),
+            torch.nn.Linear(in_features=500, out_features=2, bias=True)
         )
 
     def forward(self, contents, question_ans, contents_char=None, question_ans_char=None):
@@ -227,28 +233,19 @@ class SeaReader(torch.nn.Module):
         # 10个文档的cat到一起
         reasoning_feature =torch.cat(reasoning_feature,dim=1) #size=(16,3020,256)
 
-        maxpooling_reasoning_feature,_=torch.max(reasoning_feature,dim=2) #size=(16,3020)
-        meanpooling_reasoning_feature=torch.mean(reasoning_feature,dim=2) #size=(16,3020)
+        maxpooling_reasoning_feature_column,_=torch.max(reasoning_feature,dim=1) #size(16,256)
+        meanpooling_reasoning_feature_column=torch.mean(reasoning_feature,dim=1) #size(16,256)
+
+        maxpooling_reasoning_feature_row,_=torch.max(reasoning_feature,dim=2) #size=(16,3020)
+        meanpooling_reasoning_feature_row=torch.mean(reasoning_feature,dim=2) #size=(16,3020)
         # print(228, "============================")
         # embed()
-        pooling_reasoning_feature=torch.cat([maxpooling_reasoning_feature,meanpooling_reasoning_feature],dim=1).view(batch_size,-1) #size=(16,6040)
+        pooling_reasoning_feature=torch.cat([maxpooling_reasoning_feature_row,meanpooling_reasoning_feature_row,maxpooling_reasoning_feature_column,meanpooling_reasoning_feature_column],dim=1).view(batch_size,-1) #size=(16,6552)
 
         output=self.decision_layer.forward(pooling_reasoning_feature) #size=(16,2)
         return output
 
-        #
-        #
-        #
-        #
-        #
-        #
-        #
-        #
-        #
-        #
-        #
-        #
-        #
+
         # # # char-level encode: (seq_len, batch, hidden_size)
         # # context_vec_char = self.char_encoder.forward(context_emb_char, context_char_mask, context_mask)
         # # question_vec_char = self.char_encoder.forward(question_emb_char, question_char_mask, question_mask)

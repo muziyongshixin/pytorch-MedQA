@@ -29,7 +29,7 @@ parser = argparse.ArgumentParser(description="preprocess/train/test the model")
 parser.add_argument('mode', help='preprocess or train or test')
 parser.add_argument('--config', '-c', required=False, dest='config_path', default='config/global_config.yaml')
 parser.add_argument('--output', '-o', required=False, dest='out_path')
-parser.add_argument('--remark', required=False, dest='remark')
+parser.add_argument('--remark', required=False, dest='remark',default="")
 args = parser.parse_args()
 
 

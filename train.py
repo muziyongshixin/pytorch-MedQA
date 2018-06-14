@@ -34,7 +34,7 @@ def print_network(net):
     logger.info('Total number of parameters: %d' % num_params)
 
 
-def train(config_path,experiment_info):
+def train(config_path, experiment_info):
     logger.info('------------MedQA v1.0 Train--------------')
     logger.info('loading config file...')
     global_config = read_config(config_path)
@@ -57,7 +57,9 @@ def train(config_path,experiment_info):
     logger.info('constructing model...')
     model_choose = global_config['global']['model']
     dataset_h5_path = global_config['data']['dataset_h5']
-    if model_choose == 'MedQA-Model':
+    if model_choose == 'SeaReader':
+        model = SeaReader(dataset_h5_path, device)
+    elif model_choose == 'SimpleSeaReader':
         model = SimpleSeaReader(dataset_h5_path, device)
     elif model_choose == 'base':
         model_config = read_config('config/base_model.yaml')
@@ -111,8 +113,8 @@ def train(config_path,experiment_info):
     train_batch_size = global_config['train']['batch_size']
     valid_batch_size = global_config['train']['valid_batch_size']
 
-    batch_train_data = dataset.get_dataloader_train(train_batch_size,shuffle=True)
-    batch_dev_data = dataset.get_dataloader_dev(valid_batch_size,shuffle=False)
+    batch_train_data = dataset.get_dataloader_train(train_batch_size, shuffle=True)
+    batch_dev_data = dataset.get_dataloader_dev(valid_batch_size, shuffle=False)
     # batch_train_data = list(dataset.get_batch_train(train_batch_size))
     # batch_dev_data = list(dataset.get_batch_dev(valid_batch_size))
 
@@ -123,7 +125,7 @@ def train(config_path,experiment_info):
         enable_char = True
 
     # tensorboardX writer
-    tensorboard_writer = SummaryWriter(comment='**' + experiment_info)
+    tensorboard_writer = SummaryWriter(log_dir=os.path.join('tensorboard_logdir', experiment_info))
 
     best_valid_acc = None
     # every epoch
@@ -131,14 +133,14 @@ def train(config_path,experiment_info):
         # train
         model.train()  # set training = True, make sure right dropout
         train_avg_loss, train_avg_binary_acc = train_on_model(model=model,
-                                                                                     criterion=criterion,
-                                                                                     optimizer=optimizer,
-                                                                                     batch_data=batch_train_data,
-                                                                                     epoch=epoch,
-                                                                                     clip_grad_max=clip_grad_max,
-                                                                                     device=device,
-                                                                                     enable_char=enable_char,
-                                                                                     batch_char_func=dataset.gen_batch_with_char)
+                                                              criterion=criterion,
+                                                              optimizer=optimizer,
+                                                              batch_data=batch_train_data,
+                                                              epoch=epoch,
+                                                              clip_grad_max=clip_grad_max,
+                                                              device=device,
+                                                              enable_char=enable_char,
+                                                              batch_char_func=dataset.gen_batch_with_char)
 
         # evaluate
         with torch.no_grad():
@@ -154,7 +156,7 @@ def train(config_path,experiment_info):
         # save model when best f1 score
         if best_valid_acc is None or val_avg_problem_acc > best_valid_acc:
             epoch_info = 'epoch=%d, val_binary_acc=%.4f, val_problem_acc=%.4f' % (
-            epoch, val_avg_binary_acc, val_avg_problem_acc)
+                epoch, val_avg_binary_acc, val_avg_problem_acc)
             save_model(model,
                        epoch_info=epoch_info,
                        model_weight_path=global_config['data']['model_path'],

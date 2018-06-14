@@ -20,7 +20,6 @@ class PreprocessData:
     """
     preprocess dataset and glove embedding to hdf5 files
     """
-
     padding = '__padding__'  # id = 0
     padding_idx = 0          # also same to char level padding values
     answer_padding_idx = -1
@@ -117,8 +116,9 @@ class PreprocessData:
 
                 cur_sample_id=cur_quesion_id+"_"+candidate ##
 
-                cur_answer_text=question_grp[candidate]["text"]
-                cur_question_ans=cur_question+" "+cur_answer_text ##
+                # cur_answer_text=question_grp[candidate]["text"]
+                # cur_question_ans=cur_question+" "+cur_answer_text ##
+                cur_question_ans =question_grp[candidate]["text"] ## 因为这批数据的text里已经加了question
 
                 cur_facts=question_grp[candidate]["facts"]
 
