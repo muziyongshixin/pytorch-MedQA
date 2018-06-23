@@ -74,7 +74,8 @@ def train(config_path, experiment_info):
         raise ValueError('model "%s" in config file not recoginized' % model_choose)
 
     print_network(model)
-
+    logger.info('dataParallel using %d GPU.....'%torch.cuda.device_count())
+    model=torch.nn.DataParallel(model)
     model = model.to(device)
     # criterion = MyNLLLoss()
     criterion = CrossEntropyLoss(weight=torch.tensor([0.2, 0.8]).to(device)).to(device)
@@ -101,7 +102,7 @@ def train(config_path, experiment_info):
     # check if exist model weight
     weight_path = global_config['data']['model_path']
     if os.path.exists(weight_path) and global_config['train']['continue']:
-        logger.info('loading existing weight...')
+        logger.info('loading existing weight............')
         weight = torch.load(weight_path, map_location=lambda storage, loc: storage)
         if enable_cuda:
             weight = torch.load(weight_path, map_location=lambda storage, loc: storage.cuda())
@@ -159,8 +160,8 @@ def train(config_path, experiment_info):
                 epoch, val_avg_binary_acc, val_avg_problem_acc)
             save_model(model,
                        epoch_info=epoch_info,
-                       model_weight_path=global_config['data']['model_path'],
-                       checkpoint_path=global_config['data']['checkpoint_path'])
+                       model_weight_path=global_config['data']['model_weight_dir']+experiment_info+"_model_weight.pt",
+                       checkpoint_path=global_config['data']['checkpoint_path']+experiment_info+"_save.log")
             logger.info("=========  saving model weight on epoch=%d  =======" % epoch)
             best_valid_acc = val_avg_problem_acc
 
@@ -252,7 +253,7 @@ def save_model(model, epoch_info, model_weight_path, checkpoint_path):
     """
     # save model weight
     model_weight = model.state_dict()
-    del model_weight['embedding.embedding_layer.weight']
+    # del model_weight['embedding.embedding_layer.weight']
 
     torch.save(model_weight, model_weight_path)
     with open(checkpoint_path, 'w') as checkpoint_f:

@@ -770,6 +770,7 @@ class MyRNNBase(torch.nn.Module):
         v_dropout = self.dropout.forward(v_pack.data)
         v_pack_dropout = torch.nn.utils.rnn.PackedSequence(v_dropout, v_pack.batch_sizes)
         # v_pack_dropout 进行过dropout后的数据
+
         o_pack_dropout, _ = self.hidden.forward(v_pack_dropout)  # 经过lstm层
         # o_pack_dropout.data是torch.Size([1566, 256]) 因为是双向LSTM 维度为128*2
 

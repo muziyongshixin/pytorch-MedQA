@@ -130,6 +130,7 @@ class SeaReader(torch.nn.Module):
         # char-level embedding: (seq_len, batch, char_embedding_size)
         # context_emb_char, context_char_mask = self.char_embedding.forward(context_char)
         # question_emb_char, question_char_mask = self.char_embedding.forward(question_char)
+
         question_encode, _ = self.context_layer.forward(question_vec, question_mask) #size=(cur_batch_max_questionans_len, batch, 256)
         content_encode=[]  # word-level encode: (seq_len, batch, hidden_size)
         for i in range(contents_num):
