@@ -14,7 +14,7 @@ import torch.optim as optim
 from dataset.squad_dataset import SquadDataset
 from dataset.MedQA_dataset import MedQADataset
 from models import *
-from models.loss import MyNLLLoss, RLLoss
+from models.loss import gate_Loss, Embedding_reg_L21_Loss
 from utils.load_config import init_logging, read_config
 from utils.eval import eval_on_model
 from utils.functions import pop_dict_keys
@@ -77,8 +77,14 @@ def train(config_path, experiment_info):
     logger.info('dataParallel using %d GPU.....'%torch.cuda.device_count())
     model=torch.nn.DataParallel(model)
     model = model.to(device)
-    # criterion = MyNLLLoss()
-    criterion = CrossEntropyLoss(weight=torch.tensor([0.2, 0.8]).to(device)).to(device)
+
+    global init_embedding_weight
+    init_embedding_weight=model.state_dict()['module.embedding.embedding_layer.weight']
+
+    task_criterion = CrossEntropyLoss(weight=torch.tensor([0.2, 0.8]).to(device)).to(device)
+    gate_criterion= gate_Loss().to(device)
+    embedding_criterion= Embedding_reg_L21_Loss().to(device)
+    all_criterion=[task_criterion,gate_criterion,embedding_criterion]
 
     # optimizer
     optimizer_choose = global_config['train']['optimizer']
@@ -113,11 +119,12 @@ def train(config_path, experiment_info):
     logger.info('start training............................................')
     train_batch_size = global_config['train']['batch_size']
     valid_batch_size = global_config['train']['valid_batch_size']
+    test_batch_size=global_config['train']['test_batch_size']
 
     batch_train_data = dataset.get_dataloader_train(train_batch_size, shuffle=True)
     batch_dev_data = dataset.get_dataloader_dev(valid_batch_size, shuffle=False)
-    # batch_train_data = list(dataset.get_batch_train(train_batch_size))
-    # batch_dev_data = list(dataset.get_batch_dev(valid_batch_size))
+    batch_test_data = dataset.get_dataloader_test(test_batch_size,shuffle=False )
+
 
     clip_grad_max = global_config['train']['clip_grad_norm']
     enable_char = False
@@ -134,7 +141,7 @@ def train(config_path, experiment_info):
         # train
         model.train()  # set training = True, make sure right dropout
         train_avg_loss, train_avg_binary_acc = train_on_model(model=model,
-                                                              criterion=criterion,
+                                                              criterion=all_criterion,
                                                               optimizer=optimizer,
                                                               batch_data=batch_train_data,
                                                               epoch=epoch,
@@ -147,12 +154,22 @@ def train(config_path, experiment_info):
         with torch.no_grad():
             model.eval()  # let training = False, make sure right dropout
             val_avg_loss, val_avg_binary_acc, val_avg_problem_acc = eval_on_model(model=model,
-                                                                                  criterion=criterion,
+                                                                                  criterion=all_criterion,
                                                                                   batch_data=batch_dev_data,
                                                                                   epoch=epoch,
                                                                                   device=device,
                                                                                   enable_char=enable_char,
-                                                                                  batch_char_func=dataset.gen_batch_with_char)
+                                                                                  batch_char_func=dataset.gen_batch_with_char,
+                                                                                  init_embedding_weight=init_embedding_weight)
+
+            test_avg_loss, test_avg_binary_acc, test_avg_problem_acc=eval_on_model(model=model,
+                                                                                  criterion=all_criterion,
+                                                                                  batch_data=batch_test_data,
+                                                                                  epoch=epoch,
+                                                                                  device=device,
+                                                                                  enable_char=enable_char,
+                                                                                  batch_char_func=dataset.gen_batch_with_char,
+                                                                                  init_embedding_weight=init_embedding_weight)
 
         # save model when best f1 score
         if best_valid_acc is None or val_avg_problem_acc > best_valid_acc:
@@ -165,13 +182,17 @@ def train(config_path, experiment_info):
             logger.info("=========  saving model weight on epoch=%d  =======" % epoch)
             best_valid_acc = val_avg_problem_acc
 
-        tensorboard_writer.add_scalar("lr", optimizer.param_groups[0]['lr'], epoch)
+        tensorboard_writer.add_scalar("train/lr", optimizer.param_groups[0]['lr'], epoch)
         tensorboard_writer.add_scalar("train/avg_loss", train_avg_loss, epoch)
         tensorboard_writer.add_scalar("train/binary_acc", train_avg_binary_acc, epoch)
         # tensorboard_writer.add_scalar("train/problem_acc", train_avg_problem_acc, epoch)
         tensorboard_writer.add_scalar("val/avg_loss", val_avg_loss, epoch)
         tensorboard_writer.add_scalar("val/binary_acc", val_avg_binary_acc, epoch)
         tensorboard_writer.add_scalar("val/problem_acc", val_avg_problem_acc, epoch)
+
+        tensorboard_writer.add_scalar("test/avg_loss", test_avg_loss, epoch)
+        tensorboard_writer.add_scalar("test/binary_acc", test_avg_binary_acc, epoch)
+        tensorboard_writer.add_scalar("test/problem_acc", test_avg_problem_acc, epoch)
 
         # adjust learning rate
         scheduler.step(train_avg_loss)
@@ -208,11 +229,21 @@ def train_on_model(model, criterion, optimizer, batch_data, epoch, clip_grad_max
         sample_labels = sample_labels.to(device)
         # contents:batch_size*10*200,  question_ans:batch_size*100  ,sample_labels=batchsize
         # forward
-        pred_labels = model.forward(contents, question_ans)  # pred_labels size=(batch,1)
+        pred_labels = model.forward(contents, question_ans)  # pred_labels size=(batch,2)
+        # pred_labels=model_output[0:model_output.size()[0]-1]
+        # mean_gate_val=model_output[-1][0][0]
 
-        # get loss
-        loss = criterion.forward(pred_labels, sample_labels)
+        # get task loss
+        task_loss = criterion[0].forward(pred_labels, sample_labels)
 
+        #gate_loss
+        # gate_loss=criterion[1].forward(mean_gate_val)
+        gate_loss=0
+
+        # embedding regularized loss
+        embedding_loss=criterion[2].forward(model.state_dict()['module.embedding.embedding_layer.weight'],init_embedding_weight)
+
+        loss=task_loss+gate_loss+embedding_loss
         loss.backward()
 
         torch.nn.utils.clip_grad_norm_(model.parameters(), clip_grad_max)  # fix gradient explosion

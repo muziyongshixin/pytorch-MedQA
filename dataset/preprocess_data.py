@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__author__ = 'han'
+__author__ = 'liyz'
 
 import json
 import logging
@@ -119,7 +119,6 @@ class PreprocessData:
                 # cur_answer_text=question_grp[candidate]["text"]
                 # cur_question_ans=cur_question+" "+cur_answer_text ##
                 cur_question_ans =question_grp[candidate]["text"] ## 因为这批数据的text里已经加了question
-
                 cur_facts=question_grp[candidate]["facts"]
 
                 contents_ids=[] ##  #一个选项里的10个content的ids list的一个总的list
@@ -160,22 +159,21 @@ class PreprocessData:
         :param sentence: tokenized sentence
         :return: word ids
         """
-
         ids = [] #保存一个句子的所有单词的id  etc。[1,2,4,1,2,4,2,1]
         for word in sentence:
-            if word not in self.__word2id:
-                self.__word2id[word] = len(self.__word2id)
-                self.__meta_data['id2word'].append(word)
-
+            if word not in self.__word2id: #说明word不在词典中，因为word2id已经是全词典大小
+                # self.__word2id[word] = len(self.__word2id)
+                # self.__meta_data['id2word'].append(word)
                 # whether OOV
-                if word in self.__word2vec:   #__word2vec是由word2vec_embedding文件生成的
-                    self.__meta_data['id2vec'].append(self.__word2vec[word])
-                else:
-                    self.__oov_num += 1
-
-                    logger.debug('No.%d OOV word %s' % (self.__oov_num, word))
-                    self.__meta_data['id2vec'].append([0. for i in range(self.__embedding_size)])  #如果不在vocabulary里面用0向量表示
-            ids.append(self.__word2id[word])
+                # if word in self.__word2vec:   #__word2vec是由word2vec_embedding文件生成的
+                #     self.__meta_data['id2vec'].append(self.__word2vec[word])
+                # else:
+                self.__oov_num += 1
+                logger.debug('No.%d OOV word %s' % (self.__oov_num, word))
+                # self.__meta_data['id2vec'].append([0. for i in range(self.__embedding_size)])  #如果不在vocabulary里面用0向量表示
+                ids.append(0)
+            else:
+                ids.append(self.__word2id[word])
 
         return ids
 
@@ -201,11 +199,14 @@ class PreprocessData:
         with open(self.__embedding_path,"r") as ebf:
             for line in ebf:
                 line_split = line.split(' ')
-                self.__word2vec[line_split[0]] = [float(x) for x in line_split[1:]]
+                cur_word=line_split[0]
+                self.__word2vec[cur_word] = [float(x) for x in line_split[1:]]
+                self.__word2id[cur_word]=word_num+1 #word 的id 从1开始，0留给OOV和padding
+                self.__meta_data["id2vec"].append([float(x) for x in line_split[1:]])
+                self.__meta_data['id2word'].append(cur_word)
                 word_num += 1
                 if word_num % 10000 == 0:
                     logger.debug('handle word No.%d' % word_num)
-
         logger.debug("pertrained word2vec file reading completed")
         # with zipfile.ZipFile(self.__glove_path, 'r') as zf:
         #     if len(zf.namelist()) != 1:

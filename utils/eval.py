@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import time
-import torch
 import logging
-from dataset.preprocess_data import PreprocessData
+import time
+
+import torch
+from IPython import  embed
 
 logger = logging.getLogger(__name__)
 
-def eval_on_model(model, criterion, batch_data, epoch, device, enable_char, batch_char_func):
+def eval_on_model(model, criterion, batch_data, epoch, device, enable_char, batch_char_func,init_embedding_weight):
     """
     evaluate on a specific trained model
     :param enable_char:
@@ -33,9 +34,20 @@ def eval_on_model(model, criterion, batch_data, epoch, device, enable_char, batc
         sample_labels = sample_labels.to(device)
         # contents:batch_size*10*200,  question_ans:batch_size*100  ,sample_labels=batchsize
         # forward
-        pred_labels = model.forward(contents, question_ans)  # pred_labels size=(batch,1)
-        # get loss
-        loss = criterion.forward(pred_labels, sample_labels)
+        pred_labels = model.forward(contents, question_ans)  # pred_labels size=(batch,2)
+
+        # get task loss
+        task_loss = criterion[0].forward(pred_labels, sample_labels)
+
+        # gate_loss
+        # gate_loss = criterion[1].forward(mean_gate_val)
+        gate_loss=0
+
+        # embedding regularized loss
+        embedding_loss = criterion[2].forward(model.state_dict()['module.embedding.embedding_layer.weight'],
+                                              init_embedding_weight)
+
+        loss = task_loss + gate_loss + embedding_loss
         # logging
         batch_loss = loss.item()
         epoch_loss.update(batch_loss, len(sample_ids))

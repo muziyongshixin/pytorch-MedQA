@@ -26,7 +26,6 @@ class Word2VecEmbedding(torch.nn.Module):
             id2vec = np.array(f_meta_data['id2vec'])  # only need 1.11s
             word_dict_size = f.attrs['word_dict_size']
             embedding_size = f.attrs['embedding_size']
-
         return int(word_dict_size), int(embedding_size), torch.from_numpy(id2vec)
 
     def forward(self, x):
@@ -36,6 +35,18 @@ class Word2VecEmbedding(torch.nn.Module):
         # 将embed的tensor变成(sequence_len,batch_size,embedding)的样子
         out_emb = tmp_emb.transpose(0, 1)
         return out_emb, mask
+
+class Conv_gate_layer(torch.nn.Module):
+    """使用conv操作实现gating 的功能"""
+    def __init__(self,context_dim):
+        super(Conv_gate_layer, self).__init__()
+        self.gate_layer=torch.nn.Sequential(
+            torch.nn.Conv1d(in_channels=context_dim,out_channels=1,kernel_size=3,stride=1,padding=1),  #16*1*100
+            torch.nn.Sigmoid()
+        )
+    def forward(self, x):
+        output=self.gate_layer.forward(x)
+        return  output
 
 
 
@@ -50,7 +61,6 @@ class GloveEmbedding(torch.nn.Module):
         **output** (seq_len, batch, embedding_size): tensor that change word index to word embeddings
         **mask** (batch, seq_len): tensor that show which index is padding
     """
-
     def __init__(self, dataset_h5_path,trainable=False):
         super(GloveEmbedding, self).__init__()
         self.dataset_h5_path = dataset_h5_path

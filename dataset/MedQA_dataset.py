@@ -69,6 +69,9 @@ class MedQADataset:
         """
         return self.get_dataloader(batch_size, 'dev',shuffle)
 
+    def get_dataloader_test(self,batch_size,shuffle):
+        return self.get_dataloader(batch_size,'test',shuffle)
+
     def get_dataloader(self, batch_size, type, shuffle=True):
         """
         get dataloader on train or dev dataset

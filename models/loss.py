@@ -1,10 +1,33 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__author__ = 'han'
+__author__ = 'liyz'
 
 import torch
 import torch.nn.functional as F
+from IPython import embed
+
+class Embedding_reg_L21_Loss(torch.nn.modules.loss._Loss):
+    def __init__(self,c=0.1):
+        super(Embedding_reg_L21_Loss, self).__init__()
+        self.c=c
+    def forward(self, y_pred, y_true):
+        torch.nn.modules.loss._assert_no_grad(y_true)
+        weight_change = y_pred-y_true #size=(355921,200)
+        loss=weight_change**2 #size=(355921,200)
+        loss=torch.sum(loss,0)#size=(355921,1)
+        loss=loss**0.5#size=(355921,1)
+        loss=torch.sum(loss)#size=(1)
+        loss=loss*self.c
+        return loss
+
+class gate_Loss(torch.nn.modules.loss._Loss):
+    def __init__(self,c=0.1,t=0.7):
+        super(gate_Loss, self).__init__()
+        self.c=c
+        self.t=t
+    def forward(self,mean_gate_val):
+        return self.c*max(mean_gate_val-self.t,0)
 
 
 class MyNLLLoss(torch.nn.modules.loss._Loss):

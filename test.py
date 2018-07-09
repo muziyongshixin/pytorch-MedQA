@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+from torch.nn import CrossEntropyLoss
 
-__author__ = 'han'
+from dataset.MedQA_dataset import MedQADataset
+
+__author__ = 'liyz'
 
 import json
 import os
@@ -11,14 +14,21 @@ import argparse
 from dataset.squad_dataset import SquadDataset
 from models import *
 from utils.load_config import init_logging, read_config
-from models.loss import MyNLLLoss
+from models.loss import MyNLLLoss, gate_Loss, Embedding_reg_L21_Loss
 from utils.eval import eval_on_model
 
 logger = logging.getLogger(__name__)
 
+# print the structure and parameters number of the net
+def print_network(net):
+    num_params = 0
+    for param in net.parameters():
+        num_params += param.numel()
+    logger.info(str(net))
+    logger.info('Total number of parameters: %d' % num_params)
 
 def test(config_path, out_path):
-    logger.info('------------Match-LSTM Evaluate--------------')
+    logger.info('------------MedQA v1.0 Evaluate--------------')
     logger.info('loading config file...')
     global_config = read_config(config_path)
 
@@ -35,16 +45,21 @@ def test(config_path, out_path):
 
     torch.set_grad_enabled(False)  # make sure all tensors below have require_grad=False,
 
-    logger.info('reading squad dataset...')
-    dataset = SquadDataset(global_config)
+    ############################### 获取数据集 ############################
+    logger.info('reading MedQA h5file dataset...')
+    dataset = MedQADataset(global_config)
 
     logger.info('constructing model...')
     model_choose = global_config['global']['model']
+    logger.info("model choose is:   "+model_choose)
     dataset_h5_path = global_config['data']['dataset_h5']
-    if model_choose == 'base':
+    if model_choose == 'SeaReader':
+        model = SeaReader(dataset_h5_path, device)
+    elif model_choose == 'SimpleSeaReader':
+        model = SimpleSeaReader(dataset_h5_path, device)
+    elif model_choose == 'base':
         model_config = read_config('config/base_model.yaml')
-        model = BaseModel(dataset_h5_path,
-                          model_config)
+        model = BaseModel(dataset_h5_path, model_config)
     elif model_choose == 'match-lstm':
         model = MatchLSTM(dataset_h5_path)
     elif model_choose == 'match-lstm+':
@@ -54,8 +69,25 @@ def test(config_path, out_path):
     else:
         raise ValueError('model "%s" in config file not recoginized' % model_choose)
 
+    print_network(model)
+    logger.info('dataParallel using %d GPU.....' % torch.cuda.device_count())
+    model = torch.nn.DataParallel(model)
     model = model.to(device)
     model.eval()  # let training = False, make sure right dropout
+
+    global init_embedding_weight
+    init_embedding_weight = model.state_dict()['module.embedding.embedding_layer.weight']
+
+    #criterion
+    task_criterion = CrossEntropyLoss(weight=torch.tensor([0.2, 0.8]).to(device)).to(device)
+    gate_criterion = gate_Loss().to(device)
+    embedding_criterion = Embedding_reg_L21_Loss().to(device)
+    all_criterion = [task_criterion, gate_criterion, embedding_criterion]
+
+    # training arguments
+    logger.info('get test data loader ...')
+    test_batch_size = global_config['train']['test_batch_size']
+    batch_test_data = dataset.get_dataloader_test(test_batch_size, shuffle=False)
 
     # load model weight
     logger.info('loading model weight...')
@@ -68,7 +100,7 @@ def test(config_path, out_path):
     model.load_state_dict(weight, strict=False)
 
     # forward
-    logger.info('forwarding...')
+    logger.info('evaluate forwarding...')
 
     enable_char = False
     if model_choose == 'match-lstm+' or model_choose == 'r-net' or (
@@ -80,15 +112,15 @@ def test(config_path, out_path):
 
     # to just evaluate score or write answer to file
     if out_path is None:
-        criterion = MyNLLLoss()
-        score_em, score_f1, sum_loss = eval_on_model(model=model,
-                                                     criterion=criterion,
-                                                     batch_data=batch_dev_data,
-                                                     epoch=None,
-                                                     device=device,
-                                                     enable_char=enable_char,
-                                                     batch_char_func=dataset.gen_batch_with_char)
-        logger.info("test: ave_score_em=%.2f, ave_score_f1=%.2f, sum_loss=%.5f" % (score_em, score_f1, sum_loss))
+        test_avg_loss, test_avg_binary_acc, test_avg_problem_acc = eval_on_model(model=model,
+                                                                                 criterion=all_criterion,
+                                                                                 batch_data=batch_test_data,
+                                                                                 epoch=0,
+                                                                                 device=device,
+                                                                                 enable_char=enable_char,
+                                                                                 batch_char_func=dataset.gen_batch_with_char,
+                                                                                 init_embedding_weight=init_embedding_weight)
+        logger.info("test: test_avg_loss=%.4f, test_avg_binary_acc=%.4f, test_avg_problem_acc=%.4f" % (test_avg_loss, test_avg_binary_acc, test_avg_problem_acc))
     else:
         predict_ans = predict_on_model(model=model,
                                        batch_data=batch_dev_data,

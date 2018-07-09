@@ -1,16 +1,16 @@
 data:
   dataset:
-    train_path: data/MedQA/kexue_renwei_network_train_120000.json
-    dev_path: data/MedQA/kexue_renwei_network_dev_10031.json
-    test_path: data/MedQA/new_test_600.json
-  dataset_h5: data/kexue_renwei_network_130031_new_embedding_297k.h5  #保存预处理的数据，embedding，w2id等
+    train_path: data/MedQA/v3_train_290000.json
+    dev_path: data/MedQA/v3_dev_24596.json
+    test_path: data/MedQA/v3_test_600.json
+  dataset_h5: data/30wfull_data_with297k_embedding.h5  #保存预处理的数据，embedding，w2id等
   ignore_max_len: 200 # in train data, context token len > ignore_max_len will be dropped
   ignore_max_ques_ans_len: 100
 
   embedding_path: data/corpus_embedding_297k_200.txt   # data/glove.840B.300d.zip
   vocabulary_path: data/vocabulary
 
-  model_path: checkpoint/panda2_2018-06-17-14_05_48_with_network_data_from_scratch_model_weight.pt
+  model_path: checkpoint/phoenix1_2018-06-22-00_23_55_27k_embedding_continue_model_weight.pt
   model_weight_dir: checkpoint/
   checkpoint_path: checkpoint/
 
@@ -20,13 +20,14 @@ model:
 
 global:
   random_seed: 123
-  model: SeaReader
+  model: SimpleSeaReader
    #match-lstm+ # 'match-lstm', 'match-lstm+', 'r-net' or 'base'. Note that 'base' model is customized by base_model.yaml
 
 train:
-  continue: True # 默认是不是继续上次训练
-  batch_size: 300  #最好是5的倍数，便于计算准确率
-  valid_batch_size: 300 #default 32
+  continue: False # 默认是不是继续上次训练
+  batch_size: 120  #最好是5的倍数，便于计算准确率
+  valid_batch_size: 120 #default 32
+  test_batch_size: 120
   epoch: 100
   enable_cuda: True
 
