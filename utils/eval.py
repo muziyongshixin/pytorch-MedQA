@@ -8,7 +8,7 @@ from IPython import  embed
 
 logger = logging.getLogger(__name__)
 
-def eval_on_model(model, criterion, batch_data, epoch, device, enable_char, batch_char_func,init_embedding_weight):
+def eval_on_model(model, criterion, batch_data, epoch, device,init_embedding_weight, eval_dataset=''):
     """
     evaluate on a specific trained model
     :param enable_char:
@@ -70,8 +70,8 @@ def eval_on_model(model, criterion, batch_data, epoch, device, enable_char, batc
 
     eval_time=time.time()-start_time
     logger.info(
-        '===== epoch=%d, batch_count=%d, epoch_average_loss=%.5f, avg_binary_acc=%.4f, avg_problem_acc=%.4f, eval_time=%.1f====' % (
-            epoch, batch_cnt, epoch_loss.avg, epoch_binary_acc.avg, epoch_problem_acc.avg,eval_time))
+        '=====dataset=%s epoch=%d, batch_count=%d, epoch_average_loss=%.5f, avg_binary_acc=%.4f, avg_problem_acc=%.4f, eval_time=%.1f====' % (
+            eval_dataset, epoch, batch_cnt, epoch_loss.avg, epoch_binary_acc.avg, epoch_problem_acc.avg,eval_time))
 
     return epoch_loss.avg, epoch_binary_acc.avg, epoch_problem_acc.avg
 

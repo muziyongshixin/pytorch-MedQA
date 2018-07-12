@@ -116,7 +116,7 @@ def train(config_path, experiment_info):
             weight = torch.load(weight_path, map_location=lambda storage, loc: storage)
         # weight = pop_dict_keys(weight, ['pointer', 'init_ptr_hidden'])  # partial initial weight
         # todo 之后的版本可能不需要这句了
-        del weight['module.embedding.embedding_layer.weight'] #删除掉embedding层的参数 ，避免尺寸不对的问题
+        # del weight['module.embedding.embedding_layer.weight'] #删除掉embedding层的参数 ，避免尺寸不对的问题
         model.load_state_dict(weight, strict=False)
 
     # training arguments
@@ -160,9 +160,8 @@ def train(config_path, experiment_info):
                                                                                   batch_data=batch_dev_data,
                                                                                   epoch=epoch,
                                                                                   device=device,
-                                                                                  enable_char=enable_char,
-                                                                                  batch_char_func=dataset.gen_batch_with_char,
-                                                                                  init_embedding_weight=init_embedding_weight)
+                                                                                  init_embedding_weight=init_embedding_weight,
+                                                                                  eval_dataset='dev')
 
             # test_avg_loss, test_avg_binary_acc, test_avg_problem_acc=eval_on_model(model=model,
             #                                                                       criterion=all_criterion,
@@ -276,12 +275,11 @@ def train_on_model(model, criterion, optimizer, batch_data, epoch, clip_grad_max
                                                                                       batch_data=batch_test_data,
                                                                                       epoch=epoch*len(batch_data)+int(i/1000),
                                                                                       device=device,
-                                                                                      enable_char=enable_char,
-                                                                                      batch_char_func=None,
-                                                                                      init_embedding_weight=init_embedding_weight)
-                tensorboard_writer.add_scalar("test/avg_loss", test_avg_loss, epoch*len(batch_data)+int(i/1000))
-                tensorboard_writer.add_scalar("test/binary_acc", test_avg_binary_acc, epoch*len(batch_data)+int(i/1000))
-                tensorboard_writer.add_scalar("test/problem_acc", test_avg_problem_acc, epoch*len(batch_data)+int(i/1000))
+                                                                                      init_embedding_weight=init_embedding_weight,
+                                                                                      eval_dataset='test')
+                tensorboard_writer.add_scalar("test/avg_loss", test_avg_loss, epoch*int(len(batch_data)/1000)+int(i/1000))
+                tensorboard_writer.add_scalar("test/binary_acc", test_avg_binary_acc, epoch*int(len(batch_data)/1000)+int(i/1000))
+                tensorboard_writer.add_scalar("test/problem_acc", test_avg_problem_acc, epoch*int(len(batch_data)/1000)+int(i/1000))
             model.train()
 
     logger.info('===== epoch=%d, batch_count=%d, epoch_average_loss=%.5f, avg_binary_acc=%.4f ====' % (epoch, batch_cnt, epoch_loss.avg, epoch_binary_acc.avg))

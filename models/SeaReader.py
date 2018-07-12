@@ -120,7 +120,6 @@ class SeaReader(torch.nn.Module):
             content_vec.append(cur_content_vec)
             content_mask.append(cur_content_mask)
 
-
         # char-level embedding: (seq_len, batch, char_embedding_size)
         # context_emb_char, context_char_mask = self.char_embedding.forward(context_char)
         # question_emb_char, question_char_mask = self.char_embedding.forward(question_char)

@@ -10,7 +10,7 @@ data:
   embedding_path: data/corpus_embedding_297k_200.txt   # data/glove.840B.300d.zip
   vocabulary_path: data/vocabulary
 
-  model_path: checkpoint/panda2_2018-07-09-00_10_01_debug_model_weight.pt
+  model_path: checkpoint/phoenix1_2018-07-12-11_27_48_content100_first_model_weight.pt
   model_weight_dir: checkpoint/
   checkpoint_path: checkpoint/
 
@@ -24,9 +24,9 @@ global:
    #match-lstm+ # 'match-lstm', 'match-lstm+', 'r-net' or 'base'. Note that 'base' model is customized by base_model.yaml
 
 train:
-  continue: False # 默认是不是继续上次训练
+  continue: True # 默认是不是继续上次训练
   batch_size: 390  #最好是5的倍数，便于计算准确率
-  valid_batch_size: 400 #default 32
+  valid_batch_size: 390 #default 32
   test_batch_size: 300
   epoch: 100
   enable_cuda: True
