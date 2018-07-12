@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import time
 from torch.nn import CrossEntropyLoss
 
 from dataset.MedQA_dataset import MedQADataset
@@ -16,8 +17,10 @@ from models import *
 from utils.load_config import init_logging, read_config
 from models.loss import MyNLLLoss, gate_Loss, Embedding_reg_L21_Loss
 from utils.eval import eval_on_model
+from train import AverageMeter
 
 logger = logging.getLogger(__name__)
+
 
 # print the structure and parameters number of the net
 def print_network(net):
@@ -26,6 +29,7 @@ def print_network(net):
         num_params += param.numel()
     logger.info(str(net))
     logger.info('Total number of parameters: %d' % num_params)
+
 
 def test(config_path, out_path):
     logger.info('------------MedQA v1.0 Evaluate--------------')
@@ -51,21 +55,12 @@ def test(config_path, out_path):
 
     logger.info('constructing model...')
     model_choose = global_config['global']['model']
-    logger.info("model choose is:   "+model_choose)
+    logger.info("model choose is:   " + model_choose)
     dataset_h5_path = global_config['data']['dataset_h5']
     if model_choose == 'SeaReader':
         model = SeaReader(dataset_h5_path, device)
     elif model_choose == 'SimpleSeaReader':
         model = SimpleSeaReader(dataset_h5_path, device)
-    elif model_choose == 'base':
-        model_config = read_config('config/base_model.yaml')
-        model = BaseModel(dataset_h5_path, model_config)
-    elif model_choose == 'match-lstm':
-        model = MatchLSTM(dataset_h5_path)
-    elif model_choose == 'match-lstm+':
-        model = MatchLSTMPlus(dataset_h5_path)
-    elif model_choose == 'r-net':
-        model = RNet(dataset_h5_path)
     else:
         raise ValueError('model "%s" in config file not recoginized' % model_choose)
 
@@ -78,7 +73,7 @@ def test(config_path, out_path):
     global init_embedding_weight
     init_embedding_weight = model.state_dict()['module.embedding.embedding_layer.weight']
 
-    #criterion
+    # criterion
     task_criterion = CrossEntropyLoss(weight=torch.tensor([0.2, 0.8]).to(device)).to(device)
     gate_criterion = gate_Loss().to(device)
     embedding_criterion = Embedding_reg_L21_Loss().to(device)
@@ -103,12 +98,6 @@ def test(config_path, out_path):
     logger.info('evaluate forwarding...')
 
     enable_char = False
-    if model_choose == 'match-lstm+' or model_choose == 'r-net' or (
-            model_choose == 'base' and model_config['encoder']['enable_char']):
-        enable_char = True
-    batch_size = global_config['test']['batch_size']
-    # batch_dev_data = dataset.get_dataloader_dev(batch_size)
-    batch_dev_data = list(dataset.get_batch_dev(batch_size))
 
     # to just evaluate score or write answer to file
     if out_path is None:
@@ -120,48 +109,82 @@ def test(config_path, out_path):
                                                                                  enable_char=enable_char,
                                                                                  batch_char_func=dataset.gen_batch_with_char,
                                                                                  init_embedding_weight=init_embedding_weight)
-        logger.info("test: test_avg_loss=%.4f, test_avg_binary_acc=%.4f, test_avg_problem_acc=%.4f" % (test_avg_loss, test_avg_binary_acc, test_avg_problem_acc))
+        logger.info("test: test_avg_loss=%.4f, test_avg_binary_acc=%.4f, test_avg_problem_acc=%.4f" % (
+            test_avg_loss, test_avg_binary_acc, test_avg_problem_acc))
     else:
-        predict_ans = predict_on_model(model=model,
-                                       batch_data=batch_dev_data,
-                                       device=device,
-                                       enable_char=enable_char,
-                                       batch_char_func=dataset.gen_batch_with_char,
-                                       id_to_word_func=dataset.sentence_id2word)
-        samples_id = dataset.get_all_samples_id_dev()
-        ans_with_id = dict(zip(samples_id, predict_ans))
-
-        logging.info('writing predict answer to file %s' % out_path)
-        with open(out_path, 'w') as f:
-            json.dump(ans_with_id, f)
+        predict_on_model(model=model,
+                         batch_data=batch_test_data,
+                         device=device
+                         )
 
     logging.info('finished.')
 
 
-def predict_on_model(model, batch_data, device, enable_char, batch_char_func, id_to_word_func):
+def predict_on_model(model, batch_data, device):
+    epoch_problem_acc = AverageMeter()
     batch_cnt = len(batch_data)
-    answer = []
-
+    start_time = time.time()
     for bnum, batch in enumerate(batch_data):
-
         # batch data
-        bat_context, bat_question, bat_context_char, bat_question_char, bat_answer_range = \
-            batch_char_func(batch, enable_char=enable_char, device=device)
+        contents, question_ans, sample_labels, sample_ids = batch
+        contents = contents.to(device)
+        question_ans = question_ans.to(device)
+        sample_labels = sample_labels.to(device)
+        # contents:batch_size*10*200,  question_ans:batch_size*100  ,sample_labels=batchsize
+        # forward
+        pred_labels = model.forward(contents, question_ans)  # pred_labels size=(batch,2)
 
-        _, tmp_ans_range, _ = model.forward(bat_context, bat_question, bat_context_char, bat_question_char)
-        tmp_context_ans = zip(bat_context.cpu().data.numpy(),
-                              tmp_ans_range.cpu().data.numpy())
-        tmp_ans = [' '.join(id_to_word_func(c[a[0]:(a[1] + 1)])) for c, a in tmp_context_ans]
-        answer += tmp_ans
+        binary_acc = compute_binary_accuracy(pred_labels, sample_labels)
+        problem_acc = compute_problems_accuracy(pred_labels, sample_labels, sample_ids)
 
-        logging.info('batch=%d/%d' % (bnum, batch_cnt))
+        epoch_problem_acc.update(problem_acc.item(), int(len(sample_ids) / 5))
+
+        logger.info('batch=%d/%d, problem_acc=%.4f' % (bnum, batch_cnt, problem_acc))
 
         # manual release memory, todo: really effect?
-        del bat_context, bat_question, bat_answer_range, bat_context_char, bat_question_char
-        del tmp_ans_range
+        del contents, question_ans, sample_labels, sample_ids
+        del pred_labels
         # torch.cuda.empty_cache()
 
-    return answer
+    test_time = time.time() - start_time
+    logger.info('===== test completed, avg_problem_acc=%.4f, eval_time=%.1f====' % (epoch_problem_acc.avg, test_time))
+
+    return 0
+
+
+def compute_binary_accuracy(pred_labels, real_labels):
+    pred_labels = torch.argmax(pred_labels, dim=1)  # 得到一个16*1的矩阵，
+    difference = torch.abs(pred_labels - real_labels)
+    accuracy = 1.0 - torch.mean(difference.float())
+    return accuracy
+
+
+def compute_problems_accuracy(pred_labels, real_labels, sample_ids):
+    check_flag = True
+    problem_num = int(real_labels.size()[0] / 5)
+    # 检查是不是每5个sample都是属于一个问题的
+    for i in range(problem_num):
+        problem_id = sample_ids[i * 5].split("_")[0]
+        for j in range(5):
+            cur_pro_id = sample_ids[i * 5 + j].split("_")[0]
+            if (cur_pro_id != problem_id):
+                check_flag = False
+                break
+
+    if check_flag:
+        softmax_score = torch.nn.functional.softmax(pred_labels, dim=1)
+        confidence = softmax_score[:, 1] - softmax_score[:, 0]
+        problem_wise_confidence = confidence.resize_(problem_num, 5)
+        max_idx = torch.argmax(problem_wise_confidence, dim=1)
+        new_labels = torch.zeros(problem_num, 5).to(torch.device("cuda"))
+        new_labels[range(problem_num), max_idx] = 1
+        real_labels = real_labels.resize_(problem_num, 5).float()
+        error = torch.abs(real_labels - new_labels)
+        accuracy = 1.0 - (torch.mean(error.float()) * 5 / 2)
+        return accuracy
+    else:
+        logging.info("check problem groups failed")
+        return 0
 
 
 if __name__ == '__main__':

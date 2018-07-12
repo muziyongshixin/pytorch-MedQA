@@ -43,7 +43,7 @@ class MedQADataset:
 
             for name in ['train', 'dev','test']:
                 self.__data[name] = {}
-                for sub_name in ['contents', 'question_ans', 'samples_ids', 'samples_labels']:
+                for sub_name in ['contents', 'question_ans', 'samples_ids', 'samples_labels','samples_categorys','samples_logics']:
                     self.__data[name][sub_name] = np.array(f_data[name][sub_name])
 
             for key, value in f.attrs.items():
@@ -83,7 +83,9 @@ class MedQADataset:
         dataset = CQA_Dataset(to_long_tensor(data['contents']),
                               to_long_tensor(data['question_ans']),
                               data['samples_ids'],
-                              to_long_tensor(data["samples_labels"]))
+                              to_long_tensor(data["samples_labels"]),
+                              data['samples_categorys'],
+                              to_float_tensor(data['samples_logics']))
         dataloader = torch.utils.data.DataLoader(dataset,
                                                  batch_size=batch_size,
                                                  shuffle=shuffle)
@@ -321,21 +323,20 @@ class MedQADataset:
 
 
 
-
-
-
 class CQA_Dataset(torch.utils.data.Dataset):
     """
     torch dataset type, used for dataloader
     """
-    def __init__(self, contents, question_ans, sample_ids,sample_labels):
+    def __init__(self, contents, question_ans, sample_ids,sample_labels,sample_categorys,samples_logics):
         self.contents = contents
         self.question_ans = question_ans
         self.sample_ids = sample_ids
         self.sample_labels=sample_labels
+        self.sample_categorys=sample_categorys
+        self.sample_logics=samples_logics
 
     def __getitem__(self, index):
-        return self.contents[index], self.question_ans[index],self.sample_labels[index], self.sample_ids[index]
+        return self.contents[index], self.question_ans[index],self.sample_labels[index], self.sample_ids[index],self.sample_categorys[index],self.sample_logics[index]
 
     def __len__(self):
         return self.sample_ids.shape[0]

@@ -79,6 +79,8 @@ def to_long_tensor(np_array):
     """
     return torch.from_numpy(np_array).type(torch.long)
 
+def to_float_tensor(np_array):
+    return torch.from_numpy(np_array).type(torch.float)
 
 def count_parameters(model):
     """

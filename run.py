@@ -9,6 +9,7 @@ import logging
 import argparse
 from train import train
 from test import test
+from debug import debug
 from utils.load_config import init_logging, read_config
 from dataset.preprocess_data import PreprocessData
 
@@ -44,6 +45,8 @@ if args.mode == 'preprocess':
     preprocess(args.config_path)
 elif args.mode == 'train':
     train(args.config_path,experiment_info)
+elif args.mode=='debug':
+    debug(args.config_path,experiment_info)
 elif args.mode == 'test':
     test(config_path=args.config_path, out_path=args.out_path)
 else:

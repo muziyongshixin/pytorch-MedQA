@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import random
+import time
 
 __author__ = 'liyz'
 
@@ -33,12 +35,12 @@ class PreprocessData:
         self.__export_medqa_path = ''
         self.__embedding_path = ''
         self.__embedding_size = 200
-        self.__ignore_max_len = 200
+        self.__ignore_max_len = 100
         self._ignore_max_ques_ans_len=100
         self.__load_config(global_config)
 
         self.__question_ans_longer_100_count = 0
-        self.__content_longer_200_count = 0
+        self.__content_longer_max_count = 0
 
         # preprocess config
         self.__max_context_token_len = 0
@@ -47,6 +49,7 @@ class PreprocessData:
         # self.__max_answer_len = 0
 
         # temp data
+        self.__oov_dic={}  #oov dictionary 保存所有的oov word
         self.__word2id = {self.padding: 0}
         self.__char2id = {self.padding: 0}  # because nltk word tokenize will replace '"' with '``'
         self.__word2vec = {self.padding: [0. for i in range(self.__embedding_size)]}
@@ -102,11 +105,15 @@ class PreprocessData:
         question_ans_wids=[] # 里面的每一个元素是一个list A，A的每一个元素是question和answer连起来之后的句子的所有的词的id表示
         samples_ids = []     # 里面的每一个元素的一个字符串，例如56be4db0acb8001400a502ec_A,表示一个问题的A选项的训练样例
         samples_labels=[]   # 里面每一个元素是0或者1,0表示错误的问题和答案样例，1表示正确的
+        samples_categorys=[] # 里面每个元素是一个json字符串 如{"knw": 1.1, "infr": 0.0, "stat": 0.0}
+        samples_logics=[] # 里面每个元素是一个数，0或1 ，0表示问题问的是正确的 1表示问题问的是不正确的是
 
         for question_grp in contexts_qas:
             cur_question=question_grp["question"]
             cur_quesion_id=question_grp["id"]
             cur_correct_answer=question_grp["correct"]
+            cur_category=str(question_grp['question_category'])
+            cur_logic=(-1)**int(question_grp['logic'])  #logic 是0 的时候输出为1 logic为1的时候输出为-1
 
             for candidate in candidates:
                 if cur_correct_answer==candidate:
@@ -115,7 +122,6 @@ class PreprocessData:
                     cur_label=0  ##
 
                 cur_sample_id=cur_quesion_id+"_"+candidate ##
-
                 # cur_answer_text=question_grp[candidate]["text"]
                 # cur_question_ans=cur_question+" "+cur_answer_text ##
                 cur_question_ans =question_grp[candidate]["text"] ## 因为这批数据的text里已经加了question
@@ -125,17 +131,19 @@ class PreprocessData:
                 for fact in cur_facts:
                     cur_content=fact["content"]
                     content_words=cur_content.split(" ")
-
-
+                    if len(content_words)==0:
+                        logger.error("content length is 0, question id is %s"%cur_quesion_id)
                     if training and len(content_words)>self.__ignore_max_len:
                         content_words=content_words[0:self.__ignore_max_len]
-                        self.__content_longer_200_count+=1
-
+                        self.__content_longer_max_count+=1
                     self.__max_context_token_len = max(self.__max_context_token_len, len(content_words))
                     cur_content_id=self.__sentence_to_id(content_words) # 一个content的words的id表示
                     contents_ids.append(cur_content_id)
 
                 cur_question_ans_words=cur_question_ans.split(" ")
+                if len(cur_question_ans_words) == 0:
+                    logger.error("cur_question_ans_words length is 0, question id is %s" % cur_quesion_id)
+
                 if training and len(cur_question_ans_words)>self._ignore_max_ques_ans_len:
                     cur_question_ans_words=cur_question_ans_words[0:self._ignore_max_ques_ans_len]
                     self.__question_ans_longer_100_count+=1
@@ -147,11 +155,15 @@ class PreprocessData:
                 question_ans_wids.append(cur_question_ans_id)
                 samples_ids.append(cur_sample_id)
                 samples_labels.append(cur_label)
+                samples_categorys.append(cur_category)
+                samples_logics.append(cur_logic)
 
         return {'contents': contents_wids,
                 'question_ans': question_ans_wids,
                 'samples_ids': samples_ids,
-                'samples_labels' : samples_labels}
+                'samples_labels' : samples_labels,
+                'samples_categorys': samples_categorys,
+                'samples_logics':samples_logics}
 
     def __sentence_to_id(self, sentence):
         """
@@ -168,10 +180,14 @@ class PreprocessData:
                 # if word in self.__word2vec:   #__word2vec是由word2vec_embedding文件生成的
                 #     self.__meta_data['id2vec'].append(self.__word2vec[word])
                 # else:
-                self.__oov_num += 1
-                logger.debug('No.%d OOV word %s' % (self.__oov_num, word))
+                if word not in self.__oov_dic:
+                    self.__oov_num += 1
+                    logger.debug('No.%d OOV word %s' % (self.__oov_num, word))
+                    self.__oov_dic[word]=1
+                else:
+                    self.__oov_dic[word]+=1
                 # self.__meta_data['id2vec'].append([0. for i in range(self.__embedding_size)])  #如果不在vocabulary里面用0向量表示
-                ids.append(0)
+                ids.append(random.randint(0,290000)) #OOV 单词使用随机word id
             else:
                 ids.append(self.__word2id[word])
 
@@ -199,15 +215,18 @@ class PreprocessData:
         with open(self.__embedding_path,"r") as ebf:
             for line in ebf:
                 line_split = line.split(' ')
-                cur_word=line_split[0]
-                self.__word2vec[cur_word] = [float(x) for x in line_split[1:]]
-                self.__word2id[cur_word]=word_num+1 #word 的id 从1开始，0留给OOV和padding
-                self.__meta_data["id2vec"].append([float(x) for x in line_split[1:]])
-                self.__meta_data['id2word'].append(cur_word)
-                word_num += 1
+                cur_word = line_split[0]
+                if len(line_split) ==201:
+                    self.__word2vec[cur_word] = [float(x) for x in line_split[1:]]
+                    self.__word2id[cur_word] = word_num + 1  # word 的id 从1开始，0留给OOV和padding
+                    self.__meta_data["id2vec"].append([float(x) for x in line_split[1:]])
+                    self.__meta_data['id2word'].append(cur_word)
+                    word_num += 1
+                else:
+                    logger.error("%s embedding size incorrect"%line)
                 if word_num % 10000 == 0:
                     logger.debug('handle word No.%d' % word_num)
-        logger.debug("pertrained word2vec file reading completed")
+        logger.debug("pre-trained word2vec file reading completed")
         # with zipfile.ZipFile(self.__glove_path, 'r') as zf:
         #     if len(zf.namelist()) != 1:
         #         raise ValueError('glove file "%s" not recognized' % self.__glove_path)
@@ -223,9 +242,6 @@ class PreprocessData:
         #             word_num += 1
         #             if word_num % 10000 == 0:
         #                 logger.debug('handle word No.%d' % word_num)
-
-
-
 
     def __pad_contents_sequences(self,all_contents):
         new_all_contents=[]
@@ -271,10 +287,10 @@ class PreprocessData:
         self.__attr['max_context_token_len'] = self.__max_context_token_len,
 
         logger.debug("self.__question_ans_longer_100_count======="+str(self.__question_ans_longer_100_count))
-        logger.debug("self.__content_longer_200_count======="+str(self.__content_longer_200_count))
+        logger.debug("self.__content_longer_max_count======="+str(self.__content_longer_max_count))
 
-        logger.info('padding id vectors...')
-
+        logger.info('padding id vectors........')
+        padding_start_time=time.time()
         logger.info('padding test id vectors...')
         self.__data['test'] = {
             'contents': self.__pad_contents_sequences(test_cache_nopad['contents']),
@@ -283,7 +299,25 @@ class PreprocessData:
                                           padding='post',
                                           value=self.padding_idx),
             'samples_ids': np.array(test_cache_nopad['samples_ids']),
-            'samples_labels': np.array(test_cache_nopad['samples_labels'])}
+            'samples_labels': np.array(test_cache_nopad['samples_labels']),
+            'samples_categorys':np.array(test_cache_nopad['samples_categorys']),
+            'samples_logics':np.array(test_cache_nopad['samples_logics'])}
+        logger.info('padding test dataset using time= %.2f'%(time.time()-padding_start_time))
+        padding_start_time=time.time()
+
+        logger.info('padding dev id vectors...')
+        self.__data['dev'] = {
+            'contents': self.__pad_contents_sequences(dev_cache_nopad['contents']),
+            'question_ans': pad_sequences(dev_cache_nopad['question_ans'],
+                                          maxlen=self.__max_question_ans_token_len,
+                                          padding='post',
+                                          value=self.padding_idx),
+            'samples_ids': np.array(dev_cache_nopad['samples_ids']),
+            'samples_labels': np.array(dev_cache_nopad['samples_labels']),
+            'samples_categorys':np.array(dev_cache_nopad['samples_categorys']),
+            'samples_logics':np.array(dev_cache_nopad['samples_logics'])}
+        logger.info('padding dev dataset using time= %.2f' % (time.time() - padding_start_time))
+        padding_start_time = time.time()
 
         logger.info('padding train id vectors...')
         self.__data['train'] = {
@@ -293,26 +327,22 @@ class PreprocessData:
                                       padding='post',
                                       value=self.padding_idx),
             'samples_ids':    np.array(train_cache_nopad['samples_ids']),
-            'samples_labels': np.array(train_cache_nopad['samples_labels'])}
+            'samples_labels': np.array(train_cache_nopad['samples_labels']),
+            'samples_categorys':np.array(train_cache_nopad['samples_categorys']),
+            'samples_logics':np.array(train_cache_nopad['samples_logics'])}
+        logger.info('padding train dataset using time= %.2f' % (time.time() - padding_start_time))
 
-        logger.info('padding dev id vectors...')
-        self.__data['dev'] = {
-            'contents':       self.__pad_contents_sequences(dev_cache_nopad['contents']),
-            'question_ans':   pad_sequences(dev_cache_nopad['question_ans'],
-                                      maxlen=self.__max_question_ans_token_len,
-                                      padding='post',
-                                      value=self.padding_idx),
-            'samples_ids':    np.array(dev_cache_nopad['samples_ids']),
-            'samples_labels': np.array(dev_cache_nopad['samples_labels'])}
 
         logger.info('export to hdf5 file...')
-        self.__export_squad_hdf5()
+        export_h5_start_time = time.time()
+        self.__export_medqa_hdf5()
+        logger.info('export medqa hdf5 using time= %.2f' % (time.time() - export_h5_start_time))
 
-        logger.info('finished.')
+        logger.info('finished!!!!!!!!!!!!!!!!!!!!!!!!')
 
 
 
-    def __export_squad_hdf5(self):
+    def __export_medqa_hdf5(self):
         """
         export squad dataset to hdf5 file
         :return:

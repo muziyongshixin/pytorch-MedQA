@@ -34,7 +34,7 @@ def print_network(net):
     logger.info('Total number of parameters: %d' % num_params)
 
 
-def train(config_path, experiment_info):
+def debug(config_path, experiment_info):
     logger.info('------------MedQA v1.0 Train--------------')
     logger.info('loading config file...')
     global_config = read_config(config_path)
@@ -72,7 +72,7 @@ def train(config_path, experiment_info):
     elif model_choose == 'r-net':
         model = RNet(dataset_h5_path)
     else:
-        raise ValueError('model "%s" in config file not recognized' % model_choose)
+        raise ValueError('model "%s" in config file not recoginized' % model_choose)
 
     print_network(model)
     logger.info('dataParallel using %d GPU.....'%torch.cuda.device_count())
@@ -121,7 +121,7 @@ def train(config_path, experiment_info):
 
     # training arguments
     logger.info('start training............................................')
-    train_batch_size = global_config['train']['batch_size']
+    train_batch_size = 200
     valid_batch_size = global_config['train']['valid_batch_size']
     test_batch_size=global_config['train']['test_batch_size']
 
@@ -130,22 +130,19 @@ def train(config_path, experiment_info):
     global batch_test_data
     batch_test_data = dataset.get_dataloader_test(test_batch_size,shuffle=False )
 
+
     clip_grad_max = global_config['train']['clip_grad_norm']
     enable_char = False
 
-    # tensorboardX writer
-    global tensorboard_writer
-    tensorboard_writer = SummaryWriter(log_dir=os.path.join('tensorboard_logdir', experiment_info))
-
     best_valid_acc = None
     # every epoch
-    for epoch in range(global_config['train']['epoch']):
+    for epoch in range(1):
         # train
         model.train()  # set training = True, make sure right dropout
         train_avg_loss, train_avg_binary_acc = train_on_model(model=model,
                                                               criterion=all_criterion,
                                                               optimizer=optimizer,
-                                                              batch_data=batch_train_data,
+                                                              batch_data=batch_dev_data,
                                                               epoch=epoch,
                                                               clip_grad_max=clip_grad_max,
                                                               device=device,
@@ -153,16 +150,16 @@ def train(config_path, experiment_info):
                                                               batch_char_func=dataset.gen_batch_with_char)
 
         # evaluate
-        with torch.no_grad():
-            model.eval()  # let training = False, make sure right dropout
-            val_avg_loss, val_avg_binary_acc, val_avg_problem_acc = eval_on_model(model=model,
-                                                                                  criterion=all_criterion,
-                                                                                  batch_data=batch_dev_data,
-                                                                                  epoch=epoch,
-                                                                                  device=device,
-                                                                                  enable_char=enable_char,
-                                                                                  batch_char_func=dataset.gen_batch_with_char,
-                                                                                  init_embedding_weight=init_embedding_weight)
+        # with torch.no_grad():
+        #     model.eval()  # let training = False, make sure right dropout
+        #     val_avg_loss, val_avg_binary_acc, val_avg_problem_acc = eval_on_model(model=model,
+        #                                                                           criterion=all_criterion,
+        #                                                                           batch_data=batch_dev_data,
+        #                                                                           epoch=epoch,
+        #                                                                           device=device,
+        #                                                                           enable_char=enable_char,
+        #                                                                           batch_char_func=dataset.gen_batch_with_char,
+        #                                                                           init_embedding_weight=init_embedding_weight)
 
             # test_avg_loss, test_avg_binary_acc, test_avg_problem_acc=eval_on_model(model=model,
             #                                                                       criterion=all_criterion,
@@ -173,23 +170,22 @@ def train(config_path, experiment_info):
             #                                                                       batch_char_func=dataset.gen_batch_with_char,
             #                                                                       init_embedding_weight=init_embedding_weight)
 
-        # save model when best f1 score
-        if best_valid_acc is None or val_avg_problem_acc > best_valid_acc:
-            epoch_info = 'epoch=%d, val_binary_acc=%.4f, val_problem_acc=%.4f' % (
-                epoch, val_avg_binary_acc, val_avg_problem_acc)
-            save_model(model,
-                       epoch_info=epoch_info,
-                       model_weight_path=global_config['data']['model_weight_dir']+experiment_info+"_model_weight.pt",
-                       checkpoint_path=global_config['data']['checkpoint_path']+experiment_info+"_save.log")
-            logger.info("=========  saving model weight on epoch=%d  =======" % epoch)
-            best_valid_acc = val_avg_problem_acc
+        # # save model when best f1 score
+        # if best_valid_acc is None or val_avg_problem_acc > best_valid_acc:
+        #     epoch_info = 'epoch=%d, val_binary_acc=%.4f, val_problem_acc=%.4f' % (
+        #         epoch, val_avg_binary_acc, val_avg_problem_acc)
+        #     save_model(model,
+        #                epoch_info=epoch_info,
+        #                model_weight_path=global_config['data']['model_weight_dir']+experiment_info+"_model_weight.pt",
+        #                checkpoint_path=global_config['data']['checkpoint_path']+experiment_info+"_save.log")
+        #     logger.info("=========  saving model weight on epoch=%d  =======" % epoch)
+        #     best_valid_acc = val_avg_problem_acc
 
-        tensorboard_writer.add_scalar("train/lr", optimizer.param_groups[0]['lr'], epoch)
-        tensorboard_writer.add_scalar("train/avg_loss", train_avg_loss, epoch)
-        tensorboard_writer.add_scalar("train/binary_acc", train_avg_binary_acc, epoch)
-        tensorboard_writer.add_scalar("val/avg_loss", val_avg_loss, epoch)
-        tensorboard_writer.add_scalar("val/binary_acc", val_avg_binary_acc, epoch)
-        tensorboard_writer.add_scalar("val/problem_acc", val_avg_problem_acc, epoch)
+
+        # tensorboard_writer.add_scalar("train/problem_acc", train_avg_problem_acc, epoch)
+        # tensorboard_writer.add_scalar("val/avg_loss", val_avg_loss, epoch)
+        # tensorboard_writer.add_scalar("val/binary_acc", val_avg_binary_acc, epoch)
+        # tensorboard_writer.add_scalar("val/problem_acc", val_avg_problem_acc, epoch)
 
         # tensorboard_writer.add_scalar("test/avg_loss", test_avg_loss, epoch)
         # tensorboard_writer.add_scalar("test/binary_acc", test_avg_binary_acc, epoch)
@@ -199,7 +195,7 @@ def train(config_path, experiment_info):
         scheduler.step(train_avg_loss)
 
     logger.info('finished.................................')
-    tensorboard_writer.close()
+
 
 
 def train_on_model(model, criterion, optimizer, batch_data, epoch, clip_grad_max, device, enable_char, batch_char_func):
@@ -231,58 +227,9 @@ def train_on_model(model, criterion, optimizer, batch_data, epoch, clip_grad_max
         sample_logics = sample_logics.to(device)
         # contents:batch_size*10*200,  question_ans:batch_size*100  ,sample_labels=batchsize
         # forward
-        pred_labels = model.forward(contents, question_ans,sample_logics)  # pred_labels size=(batch,2)
-        # pred_labels=model_output[0:model_output.size()[0]-1]
-        # mean_gate_val=model_output[-1][0][0]
+        pred_labels = model.forward(contents, question_ans,sample_logics,sample_ids)  # pred_labels size=(batch,2)
 
-        # get task loss
-        task_loss = criterion[0].forward(pred_labels, sample_labels)
-
-        #gate_loss
-        # gate_loss=criterion[1].forward(mean_gate_val)
-        gate_loss=0
-
-        # embedding regularized loss
-        embedding_loss=criterion[2].forward(model.state_dict()['module.embedding.embedding_layer.weight'],init_embedding_weight)
-
-        loss=task_loss+gate_loss+embedding_loss
-        loss.backward()
-
-        torch.nn.utils.clip_grad_norm_(model.parameters(), clip_grad_max)  # fix gradient explosion
-        optimizer.step()  # update parameters
-
-        # logging
-        batch_loss = loss.item()
-        epoch_loss.update(batch_loss, len(sample_ids))
-
-        binary_acc = compute_binary_accuracy(pred_labels.data, sample_labels.data)
-        # problem_acc = compute_problems_accuracy(pred_labels.data, sample_labels.data, sample_ids)
-
-        epoch_binary_acc.update(binary_acc.item(), len(sample_ids))
-        # epoch_problem_acc.update(problem_acc.item(), int(len(sample_ids) / 5))
-
-        logger.info('epoch=%d, batch=%d/%d, loss=%.5f binary_acc=%.4f ' % (
-            epoch, i, batch_cnt, batch_loss, binary_acc))
-
-        # manual release memory, todo: really effect?
-        del contents, question_ans, sample_labels, sample_ids
-        del pred_labels, loss
-
-        if i%1000==0:
-            model.eval()
-            with torch.no_grad():
-                test_avg_loss, test_avg_binary_acc, test_avg_problem_acc=eval_on_model(model=model,
-                                                                                      criterion=criterion,
-                                                                                      batch_data=batch_test_data,
-                                                                                      epoch=epoch*len(batch_data)+int(i/1000),
-                                                                                      device=device,
-                                                                                      enable_char=enable_char,
-                                                                                      batch_char_func=None,
-                                                                                      init_embedding_weight=init_embedding_weight)
-                tensorboard_writer.add_scalar("test/avg_loss", test_avg_loss, epoch*len(batch_data)+int(i/1000))
-                tensorboard_writer.add_scalar("test/binary_acc", test_avg_binary_acc, epoch*len(batch_data)+int(i/1000))
-                tensorboard_writer.add_scalar("test/problem_acc", test_avg_problem_acc, epoch*len(batch_data)+int(i/1000))
-            model.train()
+        logger.info('epoch=%d, batch=%d/%d, loss=%.5f binary_acc=%.4f ' % (epoch, i, batch_cnt, 0, 0))
 
     logger.info('===== epoch=%d, batch_count=%d, epoch_average_loss=%.5f, avg_binary_acc=%.4f ====' % (epoch, batch_cnt, epoch_loss.avg, epoch_binary_acc.avg))
 
@@ -369,4 +316,4 @@ if __name__ == '__main__':
     parser.add_argument('--config', '-c', required=False, dest='config_path', default='config/global_config.yaml')
     args = parser.parse_args()
 
-    train(args.config_path)
+    debug(args.config_path)

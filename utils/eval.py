@@ -28,13 +28,15 @@ def eval_on_model(model, criterion, batch_data, epoch, device, enable_char, batc
     start_time=time.time()
     for i, batch in enumerate(batch_data, 0):
         # batch data
-        contents, question_ans, sample_labels, sample_ids = batch
+        contents, question_ans, sample_labels, sample_ids, sample_categorys, sample_logics = batch
         contents = contents.to(device)
         question_ans = question_ans.to(device)
         sample_labels = sample_labels.to(device)
+        sample_logics = sample_logics.to(device)
+
         # contents:batch_size*10*200,  question_ans:batch_size*100  ,sample_labels=batchsize
         # forward
-        pred_labels = model.forward(contents, question_ans)  # pred_labels size=(batch,2)
+        pred_labels = model.forward(contents, question_ans, sample_logics)  # pred_labels size=(batch,2)
 
         # get task loss
         task_loss = criterion[0].forward(pred_labels, sample_labels)

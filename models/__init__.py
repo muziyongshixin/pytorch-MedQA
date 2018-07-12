@@ -4,3 +4,4 @@ from .match_lstm_plus import MatchLSTMPlus
 from .r_net import RNet
 from .SeaReader import SeaReader
 from .SimpleSeaReader import SimpleSeaReader
+from .TestModel import TestModel

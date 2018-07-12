@@ -755,7 +755,13 @@ class MyRNNBase(torch.nn.Module):
         v_sort = v.index_select(1, idx_sort)
         #v_sort表示根据长度排序后的sentence向量，最长的放在前面，最短的放在后面
         #v_sort.size()=[200,16,200],v_sort[49,15]=[0,0,0,...,0,0,0],因为最后一个sentence的单词只有49个，所以49之后的词向量都是0向量
-        v_pack = torch.nn.utils.rnn.pack_padded_sequence(v_sort, lengths_sort)
+        try:
+            v_pack = torch.nn.utils.rnn.pack_padded_sequence(v_sort, lengths_sort)
+        except:
+            print(lengths_sort)
+            print(idx_sort)
+
+            raise ValueError('pack_padded_sequence wrong' )
         # v_pack是一个PackedSequence的对象，其中包含data，和batch_sizes，两个子对象
         # data中存的计算的数据，是一个torch.Size([1566, 200])的矩阵，前16个是所有sentence的第一个单词，最后一个是最长的那个sentence的最后一个单词
         # batch_sizes中存储的是每一个计算步所需要计算的sentence数
