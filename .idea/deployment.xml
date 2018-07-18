@@ -7,6 +7,9 @@
           <mappings>
             <mapping deploy="/m/liyz/MedQA-workspace/v1.0" local="$PROJECT_DIR$" web="/" />
           </mappings>
+          <excludedPaths>
+            <excludedPath path="/m/liyz/MedQA-workspace/v1.0/data/correct_new_30wfull_data_with297k_embedding_maxcontentlen100_withlogic.h5" />
+          </excludedPaths>
         </serverdata>
       </paths>
     </serverData>

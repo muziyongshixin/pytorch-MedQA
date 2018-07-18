@@ -10,7 +10,7 @@ from IPython import embed
 from utils.functions import masked_softmax, compute_mask, masked_flip
 
 
-class SeaReader(torch.nn.Module):
+class SeaReader_5c(torch.nn.Module):
     """
     match-lstm+ model for machine comprehension
     Args:
@@ -29,7 +29,7 @@ class SeaReader(torch.nn.Module):
     """
 
     def __init__(self, dataset_h5_path, device):
-        super(SeaReader, self).__init__()
+        super(SeaReader_5c, self).__init__()
 
         self.device = device
         # set config
@@ -93,15 +93,11 @@ class SeaReader(torch.nn.Module):
 
 
         self.decision_layer = torch.nn.Sequential(
-            torch.nn.Linear(in_features=6512, out_features=1000, bias=True),
-            torch.nn.Dropout(0.2),  # drop 50% of the neuron
+            torch.nn.Linear(in_features=32560, out_features=100, bias=True),
+            # torch.nn.Dropout(0.5),  # drop 50% of the neuron
             torch.nn.ReLU(True),
-            torch.nn.BatchNorm1d(1000),
-            torch.nn.Linear(in_features=1000, out_features=500, bias=True),
-            torch.nn.Dropout(0.2),  # drop 50% of the neuron
-            torch.nn.ReLU(True),
-            torch.nn.BatchNorm1d(500),
-            torch.nn.Linear(in_features=500, out_features=2, bias=True)
+            torch.nn.BatchNorm1d(100),
+            torch.nn.Linear(in_features=100, out_features=5, bias=True)
         )
 
     def forward(self, contents, question_ans, logics, contents_char=None, question_ans_char=None):
@@ -271,12 +267,10 @@ class SeaReader(torch.nn.Module):
             # 所有的矩阵变成相同的大小
             cur_RnQ_reasoning_out = self.full_matrix_to_specify_size(cur_RnQ_reasoning_out,
                                                                      [max_question_len, batch_size,
-                                                                      cur_RnQ_reasoning_out.size()[
-                                                                          2]])  # size=(100,16,256)
+                                                                      cur_RnQ_reasoning_out.size()[2]])  # size=(100,16,256)
             cur_RmD_reasoning_out = self.full_matrix_to_specify_size(cur_RmD_reasoning_out,
                                                                      [max_content_len, batch_size,
-                                                                      cur_RmD_reasoning_out.size()[
-                                                                          2]])  # size=(200,16,256)
+                                                                      cur_RmD_reasoning_out.size()[2]])  # size=(200,16,256)
 
             #过decision layer的gate层
             cur_RnQ_reasoning_out=cur_RnQ_reasoning_out.transpose(0,1) #size(16,100,256)
@@ -298,19 +292,18 @@ class SeaReader(torch.nn.Module):
         maxpooling_reasoning_feature_row, _ = torch.max(reasoning_feature, dim=2)  # size=(16,3000)    |  when content=100 size(16,2000)
         meanpooling_reasoning_feature_row = torch.mean(reasoning_feature, dim=2)  # size=(16,3000)      |  when content=100 size(16,2000)
         # print(228, "============================")
-        # embed()
-        pooling_reasoning_feature = torch.cat(
-            [maxpooling_reasoning_feature_row, meanpooling_reasoning_feature_row, maxpooling_reasoning_feature_column,
-             meanpooling_reasoning_feature_column], dim=1).view(batch_size, -1)  # size=(16,6512)   |  when content=100 size(16,4512)
+
+        pooling_reasoning_feature = torch.cat([maxpooling_reasoning_feature_row, meanpooling_reasoning_feature_row, maxpooling_reasoning_feature_column,meanpooling_reasoning_feature_column], dim=1)
+        decision_input=pooling_reasoning_feature.view(int(batch_size/5), 32560)  # size=(16,6512*5) 五分类问题
         #
         # print(312)
         # embed()
-        output = self.decision_layer.forward(pooling_reasoning_feature)  # size=(16,2)
+        output = self.decision_layer.forward(decision_input)  # size=(batchsize/5,5)
 
         # temp_gate_val=torch.stack([mean_gate_val,torch.tensor(0.0).to(self.device)]).resize_(1,2)
         # output_with_gate_val=torch.cat([output,temp_gate_val],dim=0)
-        logics=logics.resize_(logics.size()[0],1)
-        return output*logics # logics 是反向的话乘以-1，正向的话是乘以1
+        # logics=logics.resize_(logics.size()[0],1)
+        return output # logics 是反向的话乘以-1，正向的话是乘以1
 
         # # # char-level encode: (seq_len, batch, hidden_size)
         # # context_vec_char = self.char_encoder.forward(context_emb_char, context_char_mask, context_mask)

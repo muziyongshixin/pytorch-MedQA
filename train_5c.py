@@ -16,7 +16,7 @@ from dataset.MedQA_dataset import MedQADataset
 from models import *
 from models.loss import gate_Loss, Embedding_reg_L21_Loss
 from utils.load_config import init_logging, read_config
-from utils.eval import eval_on_model
+from utils.eval_5c import eval_on_model_5c
 from utils.functions import pop_dict_keys
 from IPython import embed
 from torch.nn import CrossEntropyLoss
@@ -44,7 +44,7 @@ def weights_init(m):
             pass
         elif name.find('norm') != -1:
             pass
-def train(config_path, experiment_info):
+def train_5c(config_path, experiment_info):
     logger.info('------------MedQA v1.0 Train--------------')
     logger.info('============================loading config file... print config file =========================')
     global_config = read_config(config_path)
@@ -78,8 +78,8 @@ def train(config_path, experiment_info):
         model = TestModel(dataset_h5_path, device)
     elif model_choose == 'cnn_model':
         model = cnn_model(dataset_h5_path, device)
-    elif model_choose == 'match-lstm+':
-        model = MatchLSTMPlus(dataset_h5_path)
+    elif model_choose == 'SeaReader_5c':
+        model = SeaReader_5c(dataset_h5_path, device)
     elif model_choose == 'r-net':
         model = RNet(dataset_h5_path)
     else:
@@ -100,7 +100,7 @@ def train(config_path, experiment_info):
         embedding_layer_name='embedding.embedding_layer.weight'
     init_embedding_weight=model.state_dict()[embedding_layer_name]
 
-    task_criterion = CrossEntropyLoss(weight=torch.tensor([0.2, 0.8]).to(device)).to(device)
+    task_criterion = CrossEntropyLoss().to(device)
     gate_criterion= gate_Loss().to(device)
     embedding_criterion= Embedding_reg_L21_Loss().to(device)
     all_criterion=[task_criterion,gate_criterion,embedding_criterion]
@@ -175,7 +175,7 @@ def train(config_path, experiment_info):
         # evaluate
         with torch.no_grad():
             model.eval()  # let training = False, make sure right dropout
-            val_avg_loss, val_avg_binary_acc, val_avg_problem_acc = eval_on_model(model=model,
+            val_avg_loss, val_avg_binary_acc, val_avg_problem_acc = eval_on_model_5c(model=model,
                                                                                   criterion=all_criterion,
                                                                                   batch_data=batch_dev_data,
                                                                                   epoch=epoch,
@@ -244,32 +244,35 @@ def train_on_model(model, criterion, optimizer, batch_data, epoch, clip_grad_max
         # batch data
         # bat_context, bat_question, bat_context_char, bat_question_char, bat_answer_range = batch_char_func(batch, enable_char=enable_char, device=device)
         contents, question_ans, sample_labels, sample_ids ,sample_categorys, sample_logics = batch
+        if len(sample_ids)%(15)!=0:
+            logger.info("batch num is incorrect, ignore this batch")
+            continue
         contents = contents.to(device)
         question_ans = question_ans.to(device)
         sample_labels = sample_labels.to(device)
+        sample_labels=torch.argmax(sample_labels.resize_(int(sample_labels.size()[0]/5),5),dim=1)
         sample_logics = sample_logics.to(device)
         # contents:batch_size*10*200,  question_ans:batch_size*100  ,sample_labels=batchsize
         # forward
         pred_labels = model.forward(contents, question_ans,sample_logics)  # pred_labels size=(batch,2)
-        # pred_labels=model_output[0:model_output.size()[0]-1]
-        # mean_gate_val=model_output[-1][0][0]
 
         # get task loss
         task_loss = criterion[0].forward(pred_labels, sample_labels)
+        # #gate_loss
+        # # gate_loss=criterion[1].forward(mean_gate_val)
+        # gate_loss=0
+        #
+        # # embedding regularized loss
+        # embedding_layer_name = 'module.embedding.embedding_layer.weight'
+        # if 'module.embedding.embedding_layer.weight' in model.state_dict().keys():
+        #     embedding_layer_name = 'module.embedding.embedding_layer.weight'
+        # elif 'embedding.embedding_layer.weight' in model.state_dict().keys():
+        #     embedding_layer_name = 'embedding.embedding_layer.weight'
+        # embedding_loss=criterion[2].forward(model.state_dict()[embedding_layer_name],init_embedding_weight)
 
-        #gate_loss
-        # gate_loss=criterion[1].forward(mean_gate_val)
-        gate_loss=0
+        # loss=task_loss+gate_loss+embedding_loss
 
-        # embedding regularized loss
-        embedding_layer_name = 'module.embedding.embedding_layer.weight'
-        if 'module.embedding.embedding_layer.weight' in model.state_dict().keys():
-            embedding_layer_name = 'module.embedding.embedding_layer.weight'
-        elif 'embedding.embedding_layer.weight' in model.state_dict().keys():
-            embedding_layer_name = 'embedding.embedding_layer.weight'
-        embedding_loss=criterion[2].forward(model.state_dict()[embedding_layer_name],init_embedding_weight)
-
-        loss=task_loss+gate_loss+embedding_loss
+        loss=task_loss
         loss.backward()
 
         torch.nn.utils.clip_grad_norm_(model.parameters(), clip_grad_max)  # fix gradient explosion
@@ -279,14 +282,13 @@ def train_on_model(model, criterion, optimizer, batch_data, epoch, clip_grad_max
         batch_loss = loss.item()
         epoch_loss.update(batch_loss, len(sample_ids))
 
-        binary_acc = compute_binary_accuracy(pred_labels.data, sample_labels.data)
-        # problem_acc = compute_problems_accuracy(pred_labels.data, sample_labels.data, sample_ids)
+        # binary_acc = compute_binary_accuracy(pred_labels.data, sample_labels.data)
+        problem_acc = compute_problems_accuracy_5c(pred_labels.data, sample_labels.data, sample_ids)
 
-        epoch_binary_acc.update(binary_acc.item(), len(sample_ids))
-        # epoch_problem_acc.update(problem_acc.item(), int(len(sample_ids) / 5))
+        # epoch_binary_acc.update(binary_acc.item(), len(sample_ids))
+        epoch_problem_acc.update(problem_acc, int(len(sample_ids) / 5))
 
-        logger.info('epoch=%d, batch=%d/%d, loss=%.5f binary_acc=%.4f ' % (
-            epoch, i, batch_cnt, batch_loss, binary_acc))
+        logger.info('epoch=%d, batch=%d/%d, loss=%.5f problem_acc=%.4f ' % (epoch, i, batch_cnt, batch_loss, epoch_problem_acc.val))
 
         # manual release memory, todo: really effect?
         del contents, question_ans, sample_labels, sample_ids
@@ -295,10 +297,10 @@ def train_on_model(model, criterion, optimizer, batch_data, epoch, clip_grad_max
         if i%1000==0:
             model.eval()
             with torch.no_grad():
-                test_avg_loss, test_avg_binary_acc, test_avg_problem_acc=eval_on_model(model=model,
+                test_avg_loss, test_avg_binary_acc, test_avg_problem_acc=eval_on_model_5c(model=model,
                                                                                       criterion=criterion,
                                                                                       batch_data=batch_test_data,
-                                                                                      epoch=epoch*len(batch_data)+int(i/1000),
+                                                                                      epoch=epoch*int(len(batch_data)/1000)+int(i/1000),
                                                                                       device=device,
                                                                                       init_embedding_weight=init_embedding_weight,
                                                                                       eval_dataset='test')
@@ -307,9 +309,9 @@ def train_on_model(model, criterion, optimizer, batch_data, epoch, clip_grad_max
                 tensorboard_writer.add_scalar("test/problem_acc", test_avg_problem_acc, epoch*int(len(batch_data)/1000)+int(i/1000))
             model.train()
 
-    logger.info('===== epoch=%d, batch_count=%d, epoch_average_loss=%.5f, avg_binary_acc=%.4f ====' % (epoch, batch_cnt, epoch_loss.avg, epoch_binary_acc.avg))
+    logger.info('===== epoch=%d, batch_count=%d, epoch_average_loss=%.5f, avg_problem_acc=%.4f ====' % (epoch, batch_cnt, epoch_loss.avg, epoch_problem_acc.avg))
 
-    return epoch_loss.avg, epoch_binary_acc.avg
+    return epoch_loss.avg, epoch_problem_acc.avg
 
 
 def save_model(model, epoch_info, model_weight_path, checkpoint_path):
@@ -337,9 +339,9 @@ def compute_binary_accuracy(pred_labels, real_labels):
     return accuracy
 
 
-def compute_problems_accuracy(pred_labels, real_labels, sample_ids):
+def compute_problems_accuracy_5c(pred_labels, real_labels, sample_ids):
     check_flag = True
-    problem_num = int(real_labels.size()[0] / 5)
+    problem_num = int(len(sample_ids) / 5)
     # 检查是不是每5个sample都是属于一个问题的
     for i in range(problem_num):
         problem_id = sample_ids[i * 5].split("_")[0]
@@ -349,15 +351,10 @@ def compute_problems_accuracy(pred_labels, real_labels, sample_ids):
                 check_flag = False
                 break
     if check_flag:
-        softmax_score = torch.nn.functional.softmax(pred_labels, dim=1)
-        confidence = softmax_score[:, 1] - softmax_score[:, 0]
-        problem_wise_confidence = confidence.resize_(problem_num, 5)
-        max_idx = torch.argmax(problem_wise_confidence, dim=1)
-        new_labels = torch.zeros(problem_num, 5).to(torch.device("cuda"))
-        new_labels[range(problem_num), max_idx] = 1
-        real_labels = real_labels.resize_(problem_num, 5).float()
-        error = torch.abs(real_labels - new_labels)
-        accuracy = 1.0 - (torch.mean(error.float()) * 5 / 2)
+        pred_label_index=torch.argmax(pred_labels,dim=1) # 10*1
+        difference_index=pred_label_index-real_labels # 10*1 正确的题是0，错误的地方非零
+        correct_count=difference_index.eq(0).sum() #正确题目的数量
+        accuracy=correct_count.float().item()/problem_num
         return accuracy
     else:
         logging.info("check problem groups failed")

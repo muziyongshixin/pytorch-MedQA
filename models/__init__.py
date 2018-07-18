@@ -5,3 +5,5 @@ from .r_net import RNet
 from .SeaReader import SeaReader
 from .SimpleSeaReader import SimpleSeaReader
 from .TestModel import TestModel
+from .cnn_model import cnn_model
+from .SeaReader_5c import SeaReader_5c

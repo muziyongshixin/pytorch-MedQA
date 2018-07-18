@@ -8,7 +8,7 @@ from IPython import  embed
 
 logger = logging.getLogger(__name__)
 
-def eval_on_model(model, criterion, batch_data, epoch, device,init_embedding_weight, eval_dataset=''):
+def eval_on_model_5c(model, criterion, batch_data, epoch, device,init_embedding_weight, eval_dataset=''):
     """
     evaluate on a specific trained model
     :param enable_char:
@@ -29,9 +29,13 @@ def eval_on_model(model, criterion, batch_data, epoch, device,init_embedding_wei
     for i, batch in enumerate(batch_data, 0):
         # batch data
         contents, question_ans, sample_labels, sample_ids, sample_categorys, sample_logics = batch
+        if len(sample_ids)%(15)!=0:
+            logger.info("batch num is incorrect, ignore this batch")
+            continue
         contents = contents.to(device)
         question_ans = question_ans.to(device)
         sample_labels = sample_labels.to(device)
+        sample_labels=torch.argmax(sample_labels.resize_(int(sample_labels.size()[0]/5),5),dim=1)
         sample_logics = sample_logics.to(device)
 
         # contents:batch_size*10*200,  question_ans:batch_size*100  ,sample_labels=batchsize
@@ -41,31 +45,28 @@ def eval_on_model(model, criterion, batch_data, epoch, device,init_embedding_wei
         # get task loss
         task_loss = criterion[0].forward(pred_labels, sample_labels)
 
-        # gate_loss
-        # gate_loss = criterion[1].forward(mean_gate_val)
-        gate_loss=0
+        # # gate_loss
+        # # gate_loss = criterion[1].forward(mean_gate_val)
+        # gate_loss=0
+        #
+        # # # embedding regularized loss
+        # embedding_layer_name = 'module.embedding.embedding_layer.weight'
+        # if 'module.embedding.embedding_layer.weight' in model.state_dict().keys():
+        #     embedding_layer_name = 'module.embedding.embedding_layer.weight'
+        # elif 'embedding.embedding_layer.weight' in model.state_dict().keys():
+        #     embedding_layer_name = 'embedding.embedding_layer.weight'
+        # embedding_loss=criterion[2].forward(model.state_dict()[embedding_layer_name],init_embedding_weight)
 
-        # embedding regularized loss
-        embedding_layer_name = 'module.embedding.embedding_layer.weight'
-        if 'module.embedding.embedding_layer.weight' in model.state_dict().keys():
-            embedding_layer_name = 'module.embedding.embedding_layer.weight'
-        elif 'embedding.embedding_layer.weight' in model.state_dict().keys():
-            embedding_layer_name = 'embedding.embedding_layer.weight'
-        embedding_loss=criterion[2].forward(model.state_dict()[embedding_layer_name],init_embedding_weight)
-
-        loss = task_loss + gate_loss + embedding_loss
+        loss = task_loss
         # logging
         batch_loss = loss.item()
         epoch_loss.update(batch_loss, len(sample_ids))
 
-        binary_acc = compute_binary_accuracy(pred_labels, sample_labels)
-        problem_acc = compute_problems_accuracy(pred_labels, sample_labels, sample_ids)
+        problem_acc = compute_problems_accuracy_5c(pred_labels, sample_labels, sample_ids)
+        epoch_problem_acc.update(problem_acc, int(len(sample_ids) / 5))
 
-        epoch_binary_acc.update(binary_acc.item(), len(sample_ids))
-        epoch_problem_acc.update(problem_acc.item(), int(len(sample_ids) / 5))
-
-        logger.info('epoch=%d, batch=%d/%d, loss=%.5f binary_acc=%.4f problem_acc=%.4f' % (
-            epoch, i, batch_cnt, batch_loss, binary_acc, problem_acc))
+        logger.info('epoch=%d, batch=%d/%d, loss=%.5f  problem_acc=%.4f' % (
+            epoch, i, batch_cnt, batch_loss, problem_acc))
 
         # manual release memory, todo: really effect?
         del contents, question_ans, sample_labels, sample_ids
@@ -87,9 +88,9 @@ def compute_binary_accuracy(pred_labels, real_labels):
     return accuracy
 
 
-def compute_problems_accuracy(pred_labels, real_labels, sample_ids):
+def compute_problems_accuracy_5c(pred_labels, real_labels, sample_ids):
     check_flag = True
-    problem_num = int(real_labels.size()[0] / 5)
+    problem_num = int(len(sample_ids) / 5)
     # 检查是不是每5个sample都是属于一个问题的
     for i in range(problem_num):
         problem_id = sample_ids[i * 5].split("_")[0]
@@ -98,28 +99,20 @@ def compute_problems_accuracy(pred_labels, real_labels, sample_ids):
             if (cur_pro_id != problem_id):
                 check_flag = False
                 break
-
     if check_flag:
-        softmax_score = torch.nn.functional.softmax(pred_labels, dim=1)
-        confidence = softmax_score[:, 1] - softmax_score[:, 0]
-        problem_wise_confidence = confidence.resize_(problem_num, 5)
-        max_idx = torch.argmax(problem_wise_confidence, dim=1)
-        new_labels = torch.zeros(problem_num, 5).to(torch.device("cuda"))
-        new_labels[range(problem_num), max_idx] = 1
-        real_labels = real_labels.resize_(problem_num, 5).float()
-        error = torch.abs(real_labels - new_labels)
-        accuracy = 1.0 - (torch.mean(error.float()) * 5 / 2)
+        pred_label_index=torch.argmax(pred_labels,dim=1) # 10*1
+        difference_index=pred_label_index-real_labels # 10*1 正确的题是0，错误的地方非零
+        correct_count=difference_index.eq(0).sum() #正确题目的数量
+        accuracy=correct_count.float().item()/problem_num
         return accuracy
     else:
         logging.info("check problem groups failed")
         return 0
 
-
 class AverageMeter(object):
     """
     Computes and stores the average and current value.
     """
-
     def __init__(self):
         self.reset()
 

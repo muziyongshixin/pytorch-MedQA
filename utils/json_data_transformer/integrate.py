@@ -21,19 +21,19 @@ import random
 JIEBA_DIC_PATH = "/m/liyz/MedQA-workspace/rawdata/alphaMLE_dict.txt"
 jieba.load_userdict(JIEBA_DIC_PATH)
 
-path = "/m/liyz/MedQA-workspace/rawdata/full_data/"
+path = "/m/liyz/MedQA-workspace/rawdata/es_result_0713_production_idx/"
 
 # 将多个文件的数据合并到一个文件里，同时将text和question里的句子进行分词
-train_dev_file_list = ["kexue_2018jingbian_ESresult.txt.2933", "network_exam_ESresult.txt.29395",
-                       "renwei_exam_not2017_ESresult.txt.2984", "zhuojian_lc_ESresult.txt.35538",
-                       "kexue_exercise_ESresult.txt.8250", "network_exercise_ESresult.txt.74972",
-                       "renwei_exercise_ESresult.txt.11510", "zhuojian_notlc_ESresult.txt.149068",
-                       "data_zb_f_ESresult.txt.9957"]
-test_file_list = ['renwei_exam_2017_correct_ESresult.txt.600']
+train_dev_file_list = ["data_zb_f_ESresult.txt", "kexue_2018jingbian_ESresult.txt",
+                       "kexue_exercise_ESresult.txt", "network_exam_ESresult.txt",
+                       "network_exercise_ESresult.txt","renwei_exercise_ESresult.txt",
+                       "renwei_exam_not2017_ESresult.txt", "zhuojian_notlc_ESresult.txt",
+                       "yishijie_ESresult.txt","zhuojian_lc_ESresult.txt"]
+test_file_list = ['renwei_exam_2017_ESresult.txt']
 
-out_train_file = path + "v5/v5_train.json"
-out_dev_file = path + "v5/v5_dev.json"
-out_test_file = path + 'v5/v5_test.json'
+out_train_file = path + "v6/v6_train.json"
+out_dev_file = path + "v6/v6_dev.json"
+out_test_file = path + 'v6/v6_test.json'
 
 exe_subname = ["A", "B", "C", "D", "E"]
 

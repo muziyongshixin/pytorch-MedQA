@@ -187,10 +187,9 @@ class PreprocessData:
                 else:
                     self.__oov_dic[word]+=1
                 # self.__meta_data['id2vec'].append([0. for i in range(self.__embedding_size)])  #如果不在vocabulary里面用0向量表示
-                ids.append(random.randint(0,290000)) #OOV 单词使用随机word id
+                ids.append(random.randint(1,290000)) #OOV 单词使用随机word id
             else:
                 ids.append(self.__word2id[word])
-
         return ids
 
     def __update_to_char(self, sentence):
@@ -216,6 +215,8 @@ class PreprocessData:
             for line in ebf:
                 line_split = line.split(' ')
                 cur_word = line_split[0]
+                if cur_word == "\u0001":
+                    print("find word xxxx \u0001")
                 if len(line_split) ==201:
                     self.__word2vec[cur_word] = [float(x) for x in line_split[1:]]
                     self.__word2id[cur_word] = word_num + 1  # word 的id 从1开始，0留给OOV和padding

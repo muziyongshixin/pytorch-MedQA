@@ -10,7 +10,7 @@ from IPython import embed
 from utils.functions import masked_softmax, compute_mask, masked_flip
 
 
-class SeaReader(torch.nn.Module):
+class cnn_model(torch.nn.Module):
     """
     match-lstm+ model for machine comprehension
     Args:
@@ -29,8 +29,7 @@ class SeaReader(torch.nn.Module):
     """
 
     def __init__(self, dataset_h5_path, device):
-        super(SeaReader, self).__init__()
-
+        super(cnn_model, self).__init__()
         self.device = device
         # set config
         hidden_size = 128
@@ -55,53 +54,20 @@ class SeaReader(torch.nn.Module):
         self.enable_search = True
 
         # construct model
-        self.embedding = Word2VecEmbedding(dataset_h5_path=dataset_h5_path, trainable=True)
-        # self.char_embedding = CharEmbedding(dataset_h5_path=dataset_h5_path,
-        #                                     embedding_size=char_embedding_size,
-        #                                     trainable=True)
+        self.embedding = Word2VecEmbedding(dataset_h5_path=dataset_h5_path, trainable=False)
 
-        # self.char_encoder = CharEncoder(mode=hidden_mode,
-        #                                 input_size=char_embedding_size,
-        #                                 hidden_size=hidden_size,
-        #                                 num_layers=encoder_char_layers,
-        #                                 bidirectional=encoder_bidirection,
-        #                                 dropout_p=emb_dropout_p)
-        self.context_layer = MyRNNBase(mode=hidden_mode,
-                                       input_size=word_embedding_size,
-                                       hidden_size=hidden_size,
-                                       num_layers=encoder_word_layers,
-                                       bidirectional=encoder_bidirection,
-                                       dropout_p=dropout_p)
+        self.context_layer = torch.nn.Conv1d(in_channels=word_embedding_size,out_channels=hidden_size*2,kernel_size=3,stride=1,padding=1)  #16*128*100
 
-        self.reasoning_gating_layer = Conv_gate_layer(256)
+        self.content_reasoning_layer =torch.nn.Conv1d(in_channels=hidden_size * 4+2, out_channels=hidden_size*2, kernel_size=3, stride=1, padding=1)
 
-        self.decision_gating_layer = Conv_gate_layer(256)
-
-        self.content_reasoning_layer = MyRNNBase(mode=hidden_mode,
-                                                 input_size=hidden_size * 4+2,
-                                                 hidden_size=hidden_size,
-                                                 num_layers=1,
-                                                 bidirectional=True,
-                                                 dropout_p=0.2)
-
-        self.question_reasoning_layer = MyRNNBase(mode=hidden_mode,
-                                                  input_size=hidden_size * 2+2,
-                                                  hidden_size=hidden_size,
-                                                  num_layers=1,
-                                                  bidirectional=True,
-                                                  dropout_p=0.2)
-
+        self.question_reasoning_layer = torch.nn.Conv1d(in_channels=hidden_size * 2+2, out_channels=hidden_size*2, kernel_size=3, stride=1, padding=1)
 
         self.decision_layer = torch.nn.Sequential(
-            torch.nn.Linear(in_features=6512, out_features=1000, bias=True),
-            torch.nn.Dropout(0.2),  # drop 50% of the neuron
-            torch.nn.ReLU(True),
-            torch.nn.BatchNorm1d(1000),
-            torch.nn.Linear(in_features=1000, out_features=500, bias=True),
-            torch.nn.Dropout(0.2),  # drop 50% of the neuron
-            torch.nn.ReLU(True),
-            torch.nn.BatchNorm1d(500),
-            torch.nn.Linear(in_features=500, out_features=2, bias=True)
+            torch.nn.Linear(in_features=6512, out_features=2, bias=True),
+            # torch.nn.Dropout(0.5),  # drop 50% of the neuron
+            # torch.nn.ReLU(True),
+            # torch.nn.BatchNorm1d(100),
+            # torch.nn.Linear(in_features=100, out_features=2, bias=True)
         )
 
     def forward(self, contents, question_ans, logics, contents_char=None, question_ans_char=None):
@@ -112,69 +78,33 @@ class SeaReader(torch.nn.Module):
         contents_num = contents.size()[1]
         # word-level embedding: (seq_len, batch, embedding_size)
         content_vec = []
-        content_mask = []
-        question_vec, question_mask = self.embedding.forward(question_ans)
+        question_vec, _ = self.embedding.forward(question_ans)# vec=size(100,batch,200)
+        question_vec = question_vec.transpose(0, 1).transpose(1, 2)  # size(batch,200,100)
         for i in range(contents_num):
             cur_content = contents[:, i, :]
-            cur_content_vec, cur_content_mask = self.embedding.forward(cur_content)
+            cur_content_vec, _ = self.embedding.forward(cur_content) #size(200,batch,200)
+            cur_content_vec = cur_content_vec.transpose(0, 1).transpose(1, 2) #size(batch,embedsize,max_cont_len)
             content_vec.append(cur_content_vec)
-            content_mask.append(cur_content_mask)
 
-        # char-level embedding: (seq_len, batch, char_embedding_size)
-        # context_emb_char, context_char_mask = self.char_embedding.forward(context_char)
-        # question_emb_char, question_char_mask = self.char_embedding.forward(question_char)
-        question_encode, _ = self.context_layer.forward(question_vec,question_mask)  # size=(cur_batch_max_questionans_len, batch, 256)
-        content_encode = []  # word-level encode: (seq_len, batch, hidden_size)
+        question_encode= self.context_layer.forward(question_vec)  # size=([75, 256, 100])
+        content_encode = []
         for i in range(contents_num):
             cur_content_vec = content_vec[i]
-            cur_content_mask = content_mask[i]
-            cur_content_encode, _ = self.context_layer.forward(cur_content_vec,cur_content_mask)  # size=(cur_batch_max_content_len, batch, 256)
+            cur_content_encode = self.context_layer.forward(cur_content_vec)  # size=([75, 256, 200])
             content_encode.append(cur_content_encode)
 
         # 将所有的content编码后统一到相同的长度 200，所有的question编码后统一到相同的长度100
         same_sized_content_encode = []
         for i in range(contents_num):
             cur_content_encode = content_encode[i]
-            cur_content_encode = self.full_matrix_to_specify_size(cur_content_encode, [max_content_len, batch_size,cur_content_encode.size()[2]])  # size=(200,16,256)
+            cur_content_encode =cur_content_encode.transpose(0,2).transpose(1,2)  # size=(200,75,256)
             same_sized_content_encode.append(cur_content_encode)
-        same_sized_question_encode = self.full_matrix_to_specify_size(question_encode, [max_question_len, batch_size,question_encode.size()[2]])  # size=(100,16,256)
-
-        # 计算gating layer的值
-        reasoning_content_gating_val = []
-        reasoning_question_gating_val = None
-        decision_content_gating_val = []
-        decision_question_gating_val = None
-        for i in range(contents_num):
-            cur_content_encode = same_sized_content_encode[i]  # size=(200,16,256)
-            cur_gating_input = cur_content_encode.transpose(0, 1).transpose(1, 2)  # size=(16,256,200)
-            cur_reasoning_content_gating_val = self.reasoning_gating_layer(cur_gating_input)  # size=(16,1,200)
-            cur_reasoning_content_gating_val =cur_reasoning_content_gating_val+0.00001 # 防止出现gate为0的情况,导致后面padsequence的时候出错
-
-            cur_decision_content_gating_val = self.decision_gating_layer(cur_gating_input)  # size=(16,1,200)
-            cur_decision_content_gating_val =cur_decision_content_gating_val+0.00001 # 防止出现gate为0的情况,导致后面padsequence的时候出错
-            reasoning_content_gating_val.append(cur_reasoning_content_gating_val)
-            decision_content_gating_val.append(cur_decision_content_gating_val)
-
-        question_gating_input = same_sized_question_encode.transpose(0, 1).transpose(1, 2)  # size=(16,256,100)
-        reasoning_question_gating_val = self.reasoning_gating_layer(question_gating_input)  # size=(16,1,100)
-        reasoning_question_gating_val=reasoning_question_gating_val+0.00001 # 防止出现gate为0的情况,导致后面padsequence的时候出错
-        decision_question_gating_val = self.decision_gating_layer(question_gating_input)  # size=(16,1,100)
-        decision_question_gating_val=decision_question_gating_val+0.00001 # 防止出现gate为0的情况,导致后面padsequence的时候出错
-
-        # 计算gate loss todo: 貌似无法返回多个变量，暂时无用
-        # question_gate_val = torch.cat([reasoning_question_gating_val.view(-1), decision_question_gating_val.view(-1)])
-        # reasoning_gate_val = torch.cat([ele.view(-1) for ele in reasoning_content_gating_val])
-        # decision_gate_val = torch.cat([ele.view(-1) for ele in decision_content_gating_val])
-        # all_gate_val = torch.cat([question_gate_val, reasoning_gate_val, decision_gate_val])
-        # mean_gate_val = torch.mean(all_gate_val)
-
-
+        same_sized_question_encode = question_encode.transpose(0,2).transpose(1,2)# size=(100,75,256)
         # Matching Matrix computing, question 和每一个content都要计算matching matrix
         Matching_matrix = []
         for i in range(contents_num):
             cur_content_encode = same_sized_content_encode[i]
-            cur_Matching_matrix = self.compute_matching_matrix(same_sized_question_encode,
-                                                               cur_content_encode)  # (batch, question_len , content_len) eg(16,100,200)
+            cur_Matching_matrix = self.compute_matching_matrix(same_sized_question_encode,cur_content_encode)  # (batch, question_len , content_len) eg(16,100,200)
             Matching_matrix.append(cur_Matching_matrix)
 
         # compute an & bn
@@ -258,57 +188,38 @@ class SeaReader(torch.nn.Module):
             cur_RnQ = torch.cat([cur_RnQ, cur_matching_feature_col], dim=2)  # size=(16,100,258)
             cur_RmD = torch.cat([cur_RmD, cur_matching_feature_row], dim=2)  # size=(16,200,514)
 
-            cur_RnQ_mask = compute_mask(cur_RnQ.mean(dim=2), PreprocessData.padding_idx)
-            cur_RmD_mask = compute_mask(cur_RmD.mean(dim=2), PreprocessData.padding_idx)
-
-            gated_cur_RnQ=self.compute_gated_value(cur_RnQ,reasoning_question_gating_val)# size=(16,100,258)
-            gated_cur_RmD=self.compute_gated_value(cur_RmD,reasoning_content_gating_val[i])# size=(16,200,514)
+            gated_cur_RnQ=cur_RnQ.transpose(1,2) # size=([75, 258, 100])
+            gated_cur_RmD=cur_RmD.transpose(1,2) # size=([75, 514, 200])
 
             # 经过reasoning层
-            cur_RnQ_reasoning_out, _ = self.question_reasoning_layer.forward(gated_cur_RnQ.transpose(0,1),cur_RnQ_mask)  # size=(max_sequence_len,16,256)
-            cur_RmD_reasoning_out, _ = self.content_reasoning_layer.forward(gated_cur_RmD.transpose(0,1),cur_RmD_mask)  # size=(max_sequence_len,16,256)
-
-            # 所有的矩阵变成相同的大小
-            cur_RnQ_reasoning_out = self.full_matrix_to_specify_size(cur_RnQ_reasoning_out,
-                                                                     [max_question_len, batch_size,
-                                                                      cur_RnQ_reasoning_out.size()[
-                                                                          2]])  # size=(100,16,256)
-            cur_RmD_reasoning_out = self.full_matrix_to_specify_size(cur_RmD_reasoning_out,
-                                                                     [max_content_len, batch_size,
-                                                                      cur_RmD_reasoning_out.size()[
-                                                                          2]])  # size=(200,16,256)
+            cur_RnQ_reasoning_out = self.question_reasoning_layer.forward(gated_cur_RnQ)  # size=(16,256,100)
+            cur_RmD_reasoning_out = self.content_reasoning_layer.forward(gated_cur_RmD)  # size=(16,256,200)
 
             #过decision layer的gate层
-            cur_RnQ_reasoning_out=cur_RnQ_reasoning_out.transpose(0,1) #size(16,100,256)
-            cur_RmD_reasoning_out=cur_RmD_reasoning_out.transpose(0,1) #size(16,200,256)
+            cur_RnQ_reasoning_out=cur_RnQ_reasoning_out.transpose(1,2) #size(16,100,256)
+            cur_RmD_reasoning_out=cur_RmD_reasoning_out.transpose(1,2) #size(16,200,256)
 
-            gated_RnQ_out=self.compute_gated_value(cur_RnQ_reasoning_out,decision_question_gating_val)#size(16,100,256)
-            gated_RmD_out=self.compute_gated_value(cur_RmD_reasoning_out,decision_content_gating_val[i])#size(16,200,256)
+            gated_RnQ_out=cur_RnQ_reasoning_out #size(16,100,256)
+            gated_RmD_out=cur_RmD_reasoning_out  #size(16,200,256)
 
             # 将2种feature cat到一起得到300*256的表示
             cur_reasoning_feature = torch.cat([gated_RnQ_out, gated_RmD_out], dim=1)  # size(16,300,256) ||  when content=100 size(16,200,256)
             reasoning_feature.append(cur_reasoning_feature)
         # 10个文档的cat到一起
         reasoning_feature = torch.cat(reasoning_feature, dim=1)  # size=(16,3000,256)    |  when content=100 size(16,2000,256)
-        # print(299)
-        # embed()
+
         maxpooling_reasoning_feature_column, _ = torch.max(reasoning_feature, dim=1)  # size(16,256)
         meanpooling_reasoning_feature_column = torch.mean(reasoning_feature, dim=1)  # size(16,256)
 
         maxpooling_reasoning_feature_row, _ = torch.max(reasoning_feature, dim=2)  # size=(16,3000)    |  when content=100 size(16,2000)
         meanpooling_reasoning_feature_row = torch.mean(reasoning_feature, dim=2)  # size=(16,3000)      |  when content=100 size(16,2000)
-        # print(228, "============================")
-        # embed()
+
         pooling_reasoning_feature = torch.cat(
             [maxpooling_reasoning_feature_row, meanpooling_reasoning_feature_row, maxpooling_reasoning_feature_column,
              meanpooling_reasoning_feature_column], dim=1).view(batch_size, -1)  # size=(16,6512)   |  when content=100 size(16,4512)
-        #
-        # print(312)
-        # embed()
+
         output = self.decision_layer.forward(pooling_reasoning_feature)  # size=(16,2)
 
-        # temp_gate_val=torch.stack([mean_gate_val,torch.tensor(0.0).to(self.device)]).resize_(1,2)
-        # output_with_gate_val=torch.cat([output,temp_gate_val],dim=0)
         logics=logics.resize_(logics.size()[0],1)
         return output*logics # logics 是反向的话乘以-1，正向的话是乘以1
 
