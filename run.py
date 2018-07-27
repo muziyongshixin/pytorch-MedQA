@@ -13,9 +13,9 @@ from train import train
 from train_5c import train_5c
 from utils.load_config import init_logging, read_config
 from dataset.preprocess_data import PreprocessData
+from queue import Queue
 
-
-
+training_info=Queue()
 
 def preprocess(config_path):
     logger.info('------------Preprocess SQuAD dataset--------------')
@@ -45,13 +45,13 @@ logger.info('========================  %s  ================================='%ex
 if args.mode == 'preprocess':
     preprocess(args.config_path)
 elif args.mode == 'train':
-    train(args.config_path,experiment_info)
+    train(args.config_path,experiment_info,training_info)
 elif args.mode=='debug':
     debug(args.config_path,experiment_info)
 elif args.mode == 'test':
     test(args.config_path, experiment_info)
 elif args.mode == 'train_5c':
-    train_5c(args.config_path,experiment_info)
+    train_5c(args.config_path,experiment_info,training_info)
 else:
     raise ValueError('Unrecognized mode selected.')
 

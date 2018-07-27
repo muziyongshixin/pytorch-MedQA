@@ -63,8 +63,8 @@ def debug(config_path, experiment_info):
         model = SeaReader(dataset_h5_path, device)
     elif model_choose == 'SimpleSeaReader':
         model = SimpleSeaReader(dataset_h5_path, device)
-    elif model_choose == 'TestModel':
-        model = TestModel(dataset_h5_path, device)
+    elif model_choose == 'SeaReader_v2':
+        model = SeaReader_v2(dataset_h5_path, device)
     elif model_choose == 'match-lstm':
         model = MatchLSTM(dataset_h5_path)
     elif model_choose == 'match-lstm+':
@@ -79,8 +79,6 @@ def debug(config_path, experiment_info):
     model=torch.nn.DataParallel(model)
     model = model.to(device)
 
-    global init_embedding_weight
-    init_embedding_weight=model.state_dict()['module.embedding.embedding_layer.weight']
 
     task_criterion = CrossEntropyLoss(weight=torch.tensor([0.2, 0.8]).to(device)).to(device)
     gate_criterion= gate_Loss().to(device)
@@ -121,9 +119,9 @@ def debug(config_path, experiment_info):
 
     # training arguments
     logger.info('start training............................................')
-    train_batch_size = 200
-    valid_batch_size = global_config['train']['valid_batch_size']
-    test_batch_size=global_config['train']['test_batch_size']
+    train_batch_size = 10
+    valid_batch_size = 10
+    test_batch_size=10
 
     batch_train_data = dataset.get_dataloader_train(train_batch_size, shuffle=True)
     batch_dev_data = dataset.get_dataloader_dev(valid_batch_size, shuffle=False)

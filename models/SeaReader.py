@@ -215,12 +215,20 @@ class SeaReader(torch.nn.Module):
         RmD = []  # list[tensor（16,200,512）]
         for i in range(contents_num):
             D_RnD_m = D_RnD[i]  # size=(16,200,512)
+            Mmn_i = []
             RmD_i = []
             for j in range(contents_num):
                 D_RnD_n = D_RnD[j]  # size=(16,200,512)
                 Mmn_i_j = self.compute_cross_document_attention(D_RnD_m,
                                                                 D_RnD_n)  # 计算任意两个文档之间的attention Mmn_i_j size=（16,200,200）
-                beta_mn_i_j = torch.nn.functional.softmax(Mmn_i_j, dim=2)  # 每一行归一化为1 size=（16,200,200）
+                Mmn_i.append(Mmn_i_j)
+
+            Mmn_i = torch.stack(Mmn_i).permute(1, 2, 3, 0)  # size=(16,200,200,10)
+            softmax_Mmn_i = self.reduce_softmax(Mmn_i)  # size=(16,200,200,10)
+
+            for j in range(contents_num):
+                D_RnD_n = D_RnD[j]  # size=(16,200,512)
+                beta_mn_i_j = softmax_Mmn_i[:, :, :, j]
                 cur_RmD = torch.bmm(beta_mn_i_j, D_RnD_n)  # size=（16,200,512）
                 RmD_i.append(cur_RmD)
 
@@ -229,7 +237,24 @@ class SeaReader(torch.nn.Module):
             RmD_i = torch.sum(RmD_i, dim=1)  # size=（16,200,512）
             RmD.append(RmD_i)
 
-        # RmD=torch.stack(RmD).transpose(0,1) #size=(16,10,200,512)
+
+        # RmD = []  # list[tensor（16,200,512）]
+        # for i in range(contents_num):
+        #     D_RnD_m = D_RnD[i]  # size=(16,200,512)
+        #
+        #     RmD_i = []
+        #     for j in range(contents_num):
+        #         D_RnD_n = D_RnD[j]  # size=(16,200,512)
+        #         Mmn_i_j = self.compute_cross_document_attention(D_RnD_m,D_RnD_n)  # 计算任意两个文档之间的attention Mmn_i_j size=（16,200,200）
+        #         beta_mn_i_j = torch.nn.functional.softmax(Mmn_i_j, dim=2)  # 每一行归一化为1 size=（16,200,200）
+        #         cur_RmD = torch.bmm(beta_mn_i_j, D_RnD_n)  # size=（16,200,512）
+        #         RmD_i.append(cur_RmD)
+        #
+        #     RmD_i = torch.stack(RmD_i)  # size=（10,16,200,512）
+        #     RmD_i = RmD_i.transpose(0, 1)  # size=（16,10,200,512）
+        #     RmD_i = torch.sum(RmD_i, dim=1)  # size=（16,200,512）
+        #     RmD.append(RmD_i)
+
 
         matching_feature_row = []  # list[tensor(16,200,2)]
         matching_feature_col = []  # list[tensor(16,100,2)]
@@ -303,7 +328,7 @@ class SeaReader(torch.nn.Module):
             [maxpooling_reasoning_feature_row, meanpooling_reasoning_feature_row, maxpooling_reasoning_feature_column,
              meanpooling_reasoning_feature_column], dim=1).view(batch_size, -1)  # size=(16,6512)   |  when content=100 size(16,4512)
         #
-        # print(312)
+        # print(314)
         # embed()
         output = self.decision_layer.forward(pooling_reasoning_feature)  # size=(16,2)
 
@@ -353,8 +378,7 @@ class SeaReader(torch.nn.Module):
 
     def compute_matching_matrix(self, question_encode, content_encode):
         question_encode_trans = question_encode.transpose(0, 1)  # (batch, seq_len, embedding_size)
-        content_encode_trans = content_encode.transpose(0, 1)  # (batch, seq_len, embedding_size)
-        content_encode_trans = content_encode_trans.transpose(1, 2)  # (batch, embedding_size, seq_len)
+        content_encode_trans = content_encode.permute(1, 2, 0)  # (batch, embedding_size, seq_len)
         Matching_matrix = torch.bmm(question_encode_trans, content_encode_trans)  # (batch, question_len , content_len)
         return Matching_matrix
 
@@ -380,6 +404,12 @@ class SeaReader(torch.nn.Module):
         new_matrix[0:input_matrix.size()[0], 0:input_matrix.size()[1], 0:input_matrix.size()[2]] = input_matrix[:, :, :]
         return new_matrix
 
+    def reduce_softmax(self,input_matrix):
+        size=input_matrix.size()
+        viewd_input=input_matrix.contiguous().view(size[0],size[1],size[2]*size[3])
+        softmax_input=torch.nn.functional.softmax(viewd_input,dim=2)
+        resized_softmax=softmax_input.contiguous().view(size[0],size[1],size[2],size[3])
+        return resized_softmax
     # 通过gate值来过滤
     def compute_gated_value(self, input_matrix, gate_val):
         '''

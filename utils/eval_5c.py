@@ -7,8 +7,8 @@ import torch
 from IPython import  embed
 
 logger = logging.getLogger(__name__)
-
-def eval_on_model_5c(model, criterion, batch_data, epoch, device,init_embedding_weight, eval_dataset=''):
+gpu_nums=torch.cuda.device_count()
+def eval_on_model_5c(model, criterion, batch_data, epoch, device, eval_dataset=''):
     """
     evaluate on a specific trained model
     :param enable_char:
@@ -22,14 +22,14 @@ def eval_on_model_5c(model, criterion, batch_data, epoch, device,init_embedding_
     """
 
     epoch_loss = AverageMeter()
-    epoch_binary_acc = AverageMeter()
     epoch_problem_acc = AverageMeter()
     batch_cnt = len(batch_data)
     start_time=time.time()
     for i, batch in enumerate(batch_data, 0):
         # batch data
         contents, question_ans, sample_labels, sample_ids, sample_categorys, sample_logics = batch
-        if len(sample_ids)%(15)!=0:
+
+        if len(sample_ids)%(gpu_nums*5)!=0:
             logger.info("batch num is incorrect, ignore this batch")
             continue
         contents = contents.to(device)
@@ -49,15 +49,10 @@ def eval_on_model_5c(model, criterion, batch_data, epoch, device,init_embedding_
         # # gate_loss = criterion[1].forward(mean_gate_val)
         # gate_loss=0
         #
-        # # # embedding regularized loss
-        # embedding_layer_name = 'module.embedding.embedding_layer.weight'
-        # if 'module.embedding.embedding_layer.weight' in model.state_dict().keys():
-        #     embedding_layer_name = 'module.embedding.embedding_layer.weight'
-        # elif 'embedding.embedding_layer.weight' in model.state_dict().keys():
-        #     embedding_layer_name = 'embedding.embedding_layer.weight'
-        # embedding_loss=criterion[2].forward(model.state_dict()[embedding_layer_name],init_embedding_weight)
+        # # embedding regularized loss
+        embedding_loss=criterion[2].forward(model.delta_embedding.embedding_layer.weight)
 
-        loss = task_loss
+        loss = task_loss + embedding_loss
         # logging
         batch_loss = loss.item()
         epoch_loss.update(batch_loss, len(sample_ids))
@@ -65,8 +60,8 @@ def eval_on_model_5c(model, criterion, batch_data, epoch, device,init_embedding_
         problem_acc = compute_problems_accuracy_5c(pred_labels, sample_labels, sample_ids)
         epoch_problem_acc.update(problem_acc, int(len(sample_ids) / 5))
 
-        logger.info('epoch=%d, batch=%d/%d, loss=%.5f  problem_acc=%.4f' % (
-            epoch, i, batch_cnt, batch_loss, problem_acc))
+        logger.info('epoch=%d, batch=%d/%d, embedding_loss=%.5f loss=%.5f  problem_acc=%.4f' % (
+            epoch, i, batch_cnt, embedding_loss,batch_loss, problem_acc))
 
         # manual release memory, todo: really effect?
         del contents, question_ans, sample_labels, sample_ids
@@ -75,10 +70,10 @@ def eval_on_model_5c(model, criterion, batch_data, epoch, device,init_embedding_
 
     eval_time=time.time()-start_time
     logger.info(
-        '=====dataset=%s epoch=%d, batch_count=%d, epoch_average_loss=%.5f, avg_binary_acc=%.4f, avg_problem_acc=%.4f, eval_time=%.1f====' % (
-            eval_dataset, epoch, batch_cnt, epoch_loss.avg, epoch_binary_acc.avg, epoch_problem_acc.avg,eval_time))
+        '=====dataset=%s epoch=%d, batch_count=%d, epoch_average_loss=%.5f, avg_problem_acc=%.4f, eval_time=%.1f====' % (
+            eval_dataset, epoch, batch_cnt, epoch_loss.avg, epoch_problem_acc.avg,eval_time))
 
-    return epoch_loss.avg, epoch_binary_acc.avg, epoch_problem_acc.avg
+    return epoch_loss.avg, epoch_problem_acc.avg
 
 
 def compute_binary_accuracy(pred_labels, real_labels):

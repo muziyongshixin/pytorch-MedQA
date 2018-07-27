@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import shutil
 import socket
 import time
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -25,6 +26,28 @@ from torch.nn import init
 
 logger = logging.getLogger(__name__)
 
+# 保存本次实验的部分代码
+def save_current_codes(des_path, global_config):
+    if not os.path.exists(des_path):
+        os.mkdir(des_path)
+
+    train_file_path = os.path.realpath(__file__)  # eg：/n/liyz/videosteganography/train.py
+    cur_work_dir, trainfile = os.path.split(train_file_path)  # eg：/n/liyz/videosteganography/
+
+    new_train_path = os.path.join(des_path, trainfile)
+    shutil.copyfile(train_file_path, new_train_path)
+
+    config_file_path = cur_work_dir + "/config/global_config.yaml"
+    config_file_name = 'global_config.yaml'
+    new_config_file_path = os.path.join(des_path, config_file_name)
+    shutil.copyfile(config_file_path, new_config_file_path)
+
+    model_choose = global_config['global']['model']
+    model_file_name = model_choose + ".py"
+    model_file_path = cur_work_dir + "/models/" + model_file_name
+    new_model_file_path = os.path.join(des_path, model_file_name)
+    shutil.copyfile(model_file_path, new_model_file_path)
+
 
 # print the structure and parameters number of the net
 def print_network(net):
@@ -44,7 +67,7 @@ def weights_init(m):
             pass
         elif name.find('norm') != -1:
             pass
-def train(config_path, experiment_info):
+def train(config_path, experiment_info,thread_queue):
     logger.info('------------MedQA v1.0 Train--------------')
     logger.info('============================loading config file... print config file =========================')
     global_config = read_config(config_path)
@@ -53,6 +76,8 @@ def train(config_path, experiment_info):
     # set random seed
     seed = global_config['global']['random_seed']
     torch.manual_seed(seed)
+    global gpu_nums, init_embedding_weight, batch_test_data, tensorboard_writer, test_epoch, embedding_layer_name
+    test_epoch=0
 
     enable_cuda = global_config['train']['enable_cuda']
     device = torch.device("cuda" if enable_cuda else "cpu")
@@ -92,17 +117,17 @@ def train(config_path, experiment_info):
         model=torch.nn.DataParallel(model)
     model = model.to(device)
     # weights_init(model)
-    global init_embedding_weight
-    embedding_layer_name='module.embedding.embedding_layer.weight'
-    if 'module.embedding.embedding_layer.weight' in model.state_dict().keys():
-        embedding_layer_name='module.embedding.embedding_layer.weight'
-    elif 'embedding.embedding_layer.weight' in model.state_dict().keys():
-        embedding_layer_name='embedding.embedding_layer.weight'
-    init_embedding_weight=model.state_dict()[embedding_layer_name]
+
+    embedding_layer_name = 'module.embedding.embedding_layer.weight'
+    for name in model.state_dict().keys():
+        if 'embedding_layer.weight' in name:
+            embedding_layer_name = name
+            break
+    init_embedding_weight = model.state_dict()[embedding_layer_name].clone()
 
     task_criterion = CrossEntropyLoss(weight=torch.tensor([0.2, 0.8]).to(device)).to(device)
     gate_criterion= gate_Loss().to(device)
-    embedding_criterion= Embedding_reg_L21_Loss().to(device)
+    embedding_criterion= Embedding_reg_L21_Loss(c=0.01).to(device)
     all_criterion=[task_criterion,gate_criterion,embedding_criterion]
 
     # optimizer
@@ -137,6 +162,13 @@ def train(config_path, experiment_info):
         # todo 之后的版本可能不需要这句了
         if not global_config['train']['keep_embedding']:
             del weight['module.embedding.embedding_layer.weight'] #删除掉embedding层的参数 ，避免尺寸不对的问题
+        # # 删除全连接层的参数
+        # decision_layer_names=[]
+        # for name,w in weight.items():
+        #     if 'decision_layer' in name:
+        #         decision_layer_names.append(name)
+        # for name in decision_layer_names:
+        #     del weight[name]
         model.load_state_dict(weight, strict=False)
 
     # training arguments
@@ -147,14 +179,15 @@ def train(config_path, experiment_info):
 
     batch_train_data = dataset.get_dataloader_train(train_batch_size, shuffle=False)
     batch_dev_data = dataset.get_dataloader_dev(valid_batch_size, shuffle=False)
-    global batch_test_data
     batch_test_data = dataset.get_dataloader_test(test_batch_size,shuffle=False )
 
     clip_grad_max = global_config['train']['clip_grad_norm']
     enable_char = False
-
     # tensorboardX writer
-    global tensorboard_writer
+
+    save_cur_experiment_code_path = "savedcodes/" + experiment_info
+    save_current_codes(save_cur_experiment_code_path, global_config)
+
     tensorboard_writer = SummaryWriter(log_dir=os.path.join('tensorboard_logdir', experiment_info))
 
     best_valid_acc = None
@@ -169,8 +202,8 @@ def train(config_path, experiment_info):
                                                               epoch=epoch,
                                                               clip_grad_max=clip_grad_max,
                                                               device=device,
-                                                              enable_char=enable_char,
-                                                              batch_char_func=dataset.gen_batch_with_char)
+                                                              thread_queue=thread_queue
+                                                              )
 
         # evaluate
         with torch.no_grad():
@@ -210,10 +243,6 @@ def train(config_path, experiment_info):
         tensorboard_writer.add_scalar("val/binary_acc", val_avg_binary_acc, epoch)
         tensorboard_writer.add_scalar("val/problem_acc", val_avg_problem_acc, epoch)
 
-        # tensorboard_writer.add_scalar("test/avg_loss", test_avg_loss, epoch)
-        # tensorboard_writer.add_scalar("test/binary_acc", test_avg_binary_acc, epoch)
-        # tensorboard_writer.add_scalar("test/problem_acc", test_avg_problem_acc, epoch)
-
         #  adjust learning rate
         scheduler.step(train_avg_loss)
 
@@ -221,7 +250,7 @@ def train(config_path, experiment_info):
     tensorboard_writer.close()
 
 
-def train_on_model(model, criterion, optimizer, batch_data, epoch, clip_grad_max, device, enable_char, batch_char_func):
+def train_on_model(model, criterion, optimizer, batch_data, epoch, clip_grad_max, device, thread_queue):
     """
     train on every batch
     :param enable_char:
@@ -235,9 +264,9 @@ def train_on_model(model, criterion, optimizer, batch_data, epoch, clip_grad_max
     :param device:
     :return:
     """
+    global test_epoch
     epoch_loss = AverageMeter()
     epoch_binary_acc = AverageMeter()
-    epoch_problem_acc = AverageMeter()
     batch_cnt = len(batch_data)
     for i, batch in enumerate(batch_data, 0):
         optimizer.zero_grad()
@@ -261,15 +290,11 @@ def train_on_model(model, criterion, optimizer, batch_data, epoch, clip_grad_max
         # gate_loss=criterion[1].forward(mean_gate_val)
         gate_loss=0
 
-        # embedding regularized loss
-        embedding_layer_name = 'module.embedding.embedding_layer.weight'
-        if 'module.embedding.embedding_layer.weight' in model.state_dict().keys():
-            embedding_layer_name = 'module.embedding.embedding_layer.weight'
-        elif 'embedding.embedding_layer.weight' in model.state_dict().keys():
-            embedding_layer_name = 'embedding.embedding_layer.weight'
-        embedding_loss=criterion[2].forward(model.state_dict()[embedding_layer_name],init_embedding_weight)
-
+        # # embedding regularized loss
+        embedding_loss=criterion[2].forward(model.embedding.embedding_layer.weight,init_embedding_weight)
+        # embedding_loss=0
         loss=task_loss+gate_loss+embedding_loss
+
         loss.backward()
 
         torch.nn.utils.clip_grad_norm_(model.parameters(), clip_grad_max)  # fix gradient explosion
@@ -285,26 +310,32 @@ def train_on_model(model, criterion, optimizer, batch_data, epoch, clip_grad_max
         epoch_binary_acc.update(binary_acc.item(), len(sample_ids))
         # epoch_problem_acc.update(problem_acc.item(), int(len(sample_ids) / 5))
 
-        logger.info('epoch=%d, batch=%d/%d, loss=%.5f binary_acc=%.4f ' % (
-            epoch, i, batch_cnt, batch_loss, binary_acc))
+        logger.info('epoch=%d, batch=%d/%d, embedding_loss=%.5f  loss=%.5f binary_acc=%.4f ' % (
+            epoch, i, batch_cnt,embedding_loss, batch_loss, binary_acc))
+
+        #线程间通信，用于存放时间
+        if thread_queue.qsize()!=0:
+            thread_queue.queue.clear()
+        thread_queue.put(time.time())
 
         # manual release memory, todo: really effect?
         del contents, question_ans, sample_labels, sample_ids
         del pred_labels, loss
 
-        if i%1000==0:
+        if i % 200 == 0:
             model.eval()
             with torch.no_grad():
-                test_avg_loss, test_avg_binary_acc, test_avg_problem_acc=eval_on_model(model=model,
-                                                                                      criterion=criterion,
-                                                                                      batch_data=batch_test_data,
-                                                                                      epoch=epoch*len(batch_data)+int(i/1000),
-                                                                                      device=device,
-                                                                                      init_embedding_weight=init_embedding_weight,
-                                                                                      eval_dataset='test')
-                tensorboard_writer.add_scalar("test/avg_loss", test_avg_loss, epoch*int(len(batch_data)/1000)+int(i/1000))
-                tensorboard_writer.add_scalar("test/binary_acc", test_avg_binary_acc, epoch*int(len(batch_data)/1000)+int(i/1000))
-                tensorboard_writer.add_scalar("test/problem_acc", test_avg_problem_acc, epoch*int(len(batch_data)/1000)+int(i/1000))
+                test_avg_loss, test_binary_acc,test_avg_problem_acc = eval_on_model(model=model,
+                                                                       criterion=criterion,
+                                                                       batch_data=batch_test_data,
+                                                                       epoch=test_epoch,
+                                                                       device=device,
+                                                                       init_embedding_weight=init_embedding_weight,
+                                                                       eval_dataset='test')
+                tensorboard_writer.add_scalar("test/avg_loss", test_avg_loss, test_epoch)
+                tensorboard_writer.add_scalar("test/binary_acc", test_binary_acc, test_epoch)
+                tensorboard_writer.add_scalar("test/problem_acc", test_avg_problem_acc, test_epoch)
+                test_epoch += 1
             model.train()
 
     logger.info('===== epoch=%d, batch_count=%d, epoch_average_loss=%.5f, avg_binary_acc=%.4f ====' % (epoch, batch_cnt, epoch_loss.avg, epoch_binary_acc.avg))

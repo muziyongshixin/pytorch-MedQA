@@ -37,10 +37,23 @@ class SeaReader_5c(torch.nn.Module):
         hidden_size = 128
         hidden_mode = 'LSTM'
         dropout_p = 0.2
+        # emb_dropout_p = 0.1
         enable_layer_norm = False
+
         word_embedding_size = 200
         encoder_word_layers = 1
+
+        # char_embedding_size = 64
+        # encoder_char_layers = 1
+
         encoder_bidirection = True
+        encoder_direction_num = 2 if encoder_bidirection else 1
+
+        match_lstm_bidirection = True
+        match_rnn_direction_num = 2 if match_lstm_bidirection else 1
+
+        ptr_bidirection = False
+        self.enable_search = True
 
         # construct model
         self.embedding = Word2VecEmbedding(dataset_h5_path=dataset_h5_path, trainable=True)
@@ -81,7 +94,7 @@ class SeaReader_5c(torch.nn.Module):
 
 
         self.decision_layer = torch.nn.Sequential(
-            torch.nn.Linear(in_features=32560, out_features=100, bias=True),
+            torch.nn.Linear(in_features=5120, out_features=100, bias=True),
             torch.nn.Dropout(0.5),  # drop 50% of the neuron
             torch.nn.ReLU(True),
             # torch.nn.BatchNorm1d(100),
@@ -89,7 +102,7 @@ class SeaReader_5c(torch.nn.Module):
         )
 
     def forward(self, contents, question_ans, logics, contents_char=None, question_ans_char=None):
-        # start_time = time.time()
+
         # assert contents_char is not None and question_ans_char is not None
         batch_size = question_ans.size()[0]
         max_content_len = contents.size()[2]
@@ -105,9 +118,9 @@ class SeaReader_5c(torch.nn.Module):
             content_vec.append(cur_content_vec)
             content_mask.append(cur_content_mask)
 
-        # print("embedding time =%.4f"%(time.time()-start_time))
-        # start_time = time.time()
-
+        # char-level embedding: (seq_len, batch, char_embedding_size)
+        # context_emb_char, context_char_mask = self.char_embedding.forward(context_char)
+        # question_emb_char, question_char_mask = self.char_embedding.forward(question_char)
         question_encode, _ = self.context_layer.forward(question_vec,question_mask)  # size=(cur_batch_max_questionans_len, batch, 256)
         content_encode = []  # word-level encode: (seq_len, batch, hidden_size)
         for i in range(contents_num):
@@ -123,8 +136,8 @@ class SeaReader_5c(torch.nn.Module):
             cur_content_encode = self.full_matrix_to_specify_size(cur_content_encode, [max_content_len, batch_size,cur_content_encode.size()[2]])  # size=(200,16,256)
             same_sized_content_encode.append(cur_content_encode)
         same_sized_question_encode = self.full_matrix_to_specify_size(question_encode, [max_question_len, batch_size,question_encode.size()[2]])  # size=(100,16,256)
-        # print("context time =%.4f" % (time.time()-start_time))
-        # start_time = time.time()
+
+
         # 计算gating layer的值
         reasoning_content_gating_val = []
         reasoning_question_gating_val = None
@@ -145,10 +158,9 @@ class SeaReader_5c(torch.nn.Module):
         reasoning_question_gating_val = self.reasoning_gating_layer(question_gating_input)  # size=(16,1,100)
         reasoning_question_gating_val=reasoning_question_gating_val+0.00001 # 防止出现gate为0的情况,导致后面padsequence的时候出错
         decision_question_gating_val = self.decision_gating_layer(question_gating_input)  # size=(16,1,100)
-        # decision_question_gating_val=decision_question_gating_val+0.00001 # 防止出现gate为0的情况,导致后面padsequence的时候出错
+        decision_question_gating_val=decision_question_gating_val+0.00001 # 防止出现gate为0的情况,导致后面padsequence的时候出错
 
-        # print("compute gate time =%.4f" % (time.time()-start_time))
-        # start_time = time.time()
+
         # 计算gate loss todo: 貌似无法返回多个变量，暂时无用
         # question_gate_val = torch.cat([reasoning_question_gating_val.view(-1), decision_question_gating_val.view(-1)])
         # reasoning_gate_val = torch.cat([ele.view(-1) for ele in reasoning_content_gating_val])
@@ -174,8 +186,7 @@ class SeaReader_5c(torch.nn.Module):
             cur_bn_matrix = torch.nn.functional.softmax(cur_Matching_matrix,dim=1)  # row_wise attention,对matching matrix每一列归一化和为1 size=(batch, question_len , content_len)
             an_matrix.append(cur_an_matrix)
             bn_matrix.append(cur_bn_matrix)
-        # print("matching matrix time =%.4f" % (time.time()-start_time))
-        # start_time = time.time()
+
 
         # compute RnQ & RnD
         RnQ = []  # list[tensor[16,100,256]]
@@ -188,8 +199,8 @@ class SeaReader_5c(torch.nn.Module):
             cur_RnD = self.compute_RnD(cur_bn_matrix,same_sized_question_encode)  # size=(batch, curbatch_max_content_len , 256)    eg[16,200,256]
             RnQ.append(cur_RnQ)
             RnD.append(cur_RnD)
-        # print("RnQ time =%.4f" % (time.time()-start_time))
-        # start_time = time.time()
+
+
         ########### compute Mmn' ##############
         D_RnD = []  # 先获得D和RnD的concatenation
         for i in range(contents_num):
@@ -224,9 +235,8 @@ class SeaReader_5c(torch.nn.Module):
             RmD_i = torch.sum(RmD_i, dim=1)  # size=（16,200,512）
             RmD.append(RmD_i)
 
-        # print("RmD time =%.4f" % (time.time()-start_time))
-        # start_time = time.time()
         # RmD=torch.stack(RmD).transpose(0,1) #size=(16,10,200,512)
+
 
         matching_feature_row = []  # list[tensor(16,200,2)]
         matching_feature_col = []  # list[tensor(16,100,2)]
@@ -244,6 +254,8 @@ class SeaReader_5c(torch.nn.Module):
         # print(253)
         # embed()
         reasoning_feature = []
+        RnQ_reasoning_out=[]
+        RmD_reasoning_out=[]
         for i in range(contents_num):
             cur_RnQ = RnQ[i]  # size=(16,100,256)
             cur_RmD = RmD[i]  # size=(16,200,512)
@@ -275,34 +287,87 @@ class SeaReader_5c(torch.nn.Module):
             cur_RnQ_reasoning_out=cur_RnQ_reasoning_out.transpose(0,1) #size(16,100,256)
             cur_RmD_reasoning_out=cur_RmD_reasoning_out.transpose(0,1) #size(16,200,256)
 
-            gated_RnQ_out=self.compute_gated_value(cur_RnQ_reasoning_out,decision_question_gating_val)#size(16,100,256)
-            gated_RmD_out=self.compute_gated_value(cur_RmD_reasoning_out,decision_content_gating_val[i])#size(16,200,256)
+            RnQ_reasoning_out.append(cur_RnQ_reasoning_out)
+            RmD_reasoning_out.append(cur_RmD_reasoning_out)
 
-            # 将2种feature cat到一起得到300*256的表示
-            cur_reasoning_feature = torch.cat([gated_RnQ_out, gated_RmD_out], dim=1)  # size(16,300,256) ||  when content=100 size(16,200,256)
-            reasoning_feature.append(cur_reasoning_feature)
+            # gated_RnQ_out=self.compute_gated_value(cur_RnQ_reasoning_out,decision_question_gating_val)#size(16,100,256)
+            # gated_RmD_out=self.compute_gated_value(cur_RmD_reasoning_out,decision_content_gating_val[i])#size(16,200,256)
+            #
+            # # 将2种feature cat到一起得到300*256的表示
+            # cur_reasoning_feature = torch.cat([gated_RnQ_out, gated_RmD_out], dim=1)  # size(16,300,256) ||  when content=100 size(16,200,256)
+            # reasoning_feature.append(cur_reasoning_feature)
 
         # 10个文档的cat到一起
-        reasoning_feature = torch.cat(reasoning_feature, dim=1)  # size=(16,3000,256)    |  when content=100 size(16,2000,256)
-        maxpooling_reasoning_feature_column, _ = torch.max(reasoning_feature, dim=1)  # size(16,256)
-        meanpooling_reasoning_feature_column = torch.mean(reasoning_feature, dim=1)  # size(16,256)
+        RnQ_reasoning_out=torch.stack(RnQ_reasoning_out).transpose(0,1) #size=(16,10,100,256)
+        RmD_reasoning_out=torch.stack(RmD_reasoning_out).transpose(0,1) #size=(16,10,200,256)
 
-        maxpooling_reasoning_feature_row, _ = torch.max(reasoning_feature, dim=2)  # size=(16,3000)    |  when content=100 size(16,2000)
-        meanpooling_reasoning_feature_row = torch.mean(reasoning_feature, dim=2)  # size=(16,3000)      |  when content=100 size(16,2000)
+        RnQ_reasoning_out_maxpool,_=torch.max(RnQ_reasoning_out,dim=1) #size=(16,100,256)
+        RmD_reasoning_out_maxpool,_=torch.max(RmD_reasoning_out,dim=1) #size=(16,200,256)
 
-        pooling_reasoning_feature = torch.cat([maxpooling_reasoning_feature_row, meanpooling_reasoning_feature_row, maxpooling_reasoning_feature_column,meanpooling_reasoning_feature_column], dim=1)
-        decision_input=pooling_reasoning_feature.view(int(batch_size/5), 32560)  # size=(16,6512*5) 五分类问题
+        # gated_RnQ_reasoning_out_maxpool=self.compute_gated_value(RnQ_reasoning_out_maxpool,decision_question_gating_val) #size(16,100,256)
+        # gated_RmD_reasoning_out_maxpool=self.compute_gated_value(RmD_reasoning_out_maxpool,decision_content_gating_val)
 
+        fc_input_RnQ_maxpool,_=torch.max(RnQ_reasoning_out_maxpool,dim=1) # size(16,256)
+        fc_input_RnQ_meanpool=torch.mean(RnQ_reasoning_out_maxpool,dim=1) # size(16,256)
+
+        fc_input_RmD_maxpool,_=torch.max(RmD_reasoning_out_maxpool,dim=1)#size(16,256)
+        fc_input_RmD_meanpool=torch.mean(RmD_reasoning_out_maxpool,dim=1) #size(16,256)
+
+        fc_input=torch.cat([fc_input_RnQ_maxpool,fc_input_RnQ_meanpool,fc_input_RmD_maxpool,fc_input_RmD_meanpool],dim=1) #size(16,1024)
+
+        # reasoning_feature = torch.cat(reasoning_feature, dim=1)  # size=(16,3000,256)    |  when content=100 size(16,2000,256)
+        # # print(299)
+        # # embed()
+        # maxpooling_reasoning_feature_column, _ = torch.max(reasoning_feature, dim=1)  # size(16,256)
+        # meanpooling_reasoning_feature_column = torch.mean(reasoning_feature, dim=1)  # size(16,256)
+        #
+        # maxpooling_reasoning_feature_row, _ = torch.max(reasoning_feature, dim=2)  # size=(16,3000)    |  when content=100 size(16,2000)
+        # meanpooling_reasoning_feature_row = torch.mean(reasoning_feature, dim=2)  # size=(16,3000)      |  when content=100 size(16,2000)
+        # print(228, "============================")
+
+        # pooling_reasoning_feature = torch.cat([maxpooling_reasoning_feature_row, meanpooling_reasoning_feature_row, maxpooling_reasoning_feature_column,meanpooling_reasoning_feature_column], dim=1)
+        decision_input=fc_input.view(int(batch_size/5), 5120)  # size=(16,1024*5) 五分类问题
+        #
+        # print(312)
+        # embed()
         output = self.decision_layer.forward(decision_input)  # size=(batchsize/5,5)
 
-        logics = logics.resize_(logics.size()[0], 1)  # size=(batchsize,1)
-        logics=logics[0:logics.size()[0]:5,:] #size=(batch/5,1)
-        # print("decision time =%.4f" % (time.time()-start_time))
+
+
         # temp_gate_val=torch.stack([mean_gate_val,torch.tensor(0.0).to(self.device)]).resize_(1,2)
         # output_with_gate_val=torch.cat([output,temp_gate_val],dim=0)
         # logics=logics.resize_(logics.size()[0],1)
-        return output*logics # logics 是反向的话乘以-1，正向的话是乘以1
+        return output # logics 是反向的话乘以-1，正向的话是乘以1
 
+        # # # char-level encode: (seq_len, batch, hidden_size)
+        # # context_vec_char = self.char_encoder.forward(context_emb_char, context_char_mask, context_mask)
+        # # question_vec_char = self.char_encoder.forward(question_emb_char, question_char_mask, question_mask)
+        #
+        # # context_encode = torch.cat((context_encode, context_vec_char), dim=-1)
+        # # question_encode = torch.cat((question_encode, question_vec_char), dim=-1)
+        #
+        # # match lstm: (seq_len, batch, hidden_size)
+        # qt_aware_ct, qt_aware_last_hidden, match_para = self.match_rnn.forward(content_encode, content_mask,
+        #                                                                        question_encode, question_mask)
+        # vis_param = {'match': match_para}
+        #
+        # # birnn after self match: (seq_len, batch, hidden_size)
+        # qt_aware_ct_ag, _ = self.birnn_after_self.forward(qt_aware_ct, content_mask)
+        #
+        # # pointer net init hidden: (batch, hidden_size)
+        # ptr_net_hidden = F.tanh(self.init_ptr_hidden.forward(qt_aware_last_hidden))
+        #
+        # # pointer net: (answer_len, batch, context_len)
+        # ans_range_prop = self.pointer_net.forward(qt_aware_ct_ag, context_mask, ptr_net_hidden)
+        # ans_range_prop = ans_range_prop.transpose(0, 1)
+        #
+        # # answer range
+        # if not self.training and self.enable_search:
+        #     ans_range = answer_search(ans_range_prop, context_mask)
+        # else:
+        #     _, ans_range = torch.max(ans_range_prop, dim=2)
+        #
+        # return ans_range_prop, ans_range, vis_param
 
     def load_glove_hdf5(self):
         with h5py.File(self.dataset_h5_path, 'r') as f:
@@ -315,7 +380,8 @@ class SeaReader_5c(torch.nn.Module):
 
     def compute_matching_matrix(self, question_encode, content_encode):
         question_encode_trans = question_encode.transpose(0, 1)  # (batch, seq_len, embedding_size)
-        content_encode_trans = content_encode.permute(1, 2, 0)  # (batch, embedding_size, seq_len)
+        content_encode_trans = content_encode.transpose(0, 1)  # (batch, seq_len, embedding_size)
+        content_encode_trans = content_encode_trans.transpose(1, 2)  # (batch, embedding_size, seq_len)
         Matching_matrix = torch.bmm(question_encode_trans, content_encode_trans)  # (batch, question_len , content_len)
         return Matching_matrix
 

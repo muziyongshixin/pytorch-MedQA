@@ -24,16 +24,17 @@ jieba.load_userdict(JIEBA_DIC_PATH)
 path = "/m/liyz/MedQA-workspace/rawdata/es_result_0713_production_idx/"
 
 # 将多个文件的数据合并到一个文件里，同时将text和question里的句子进行分词
-train_dev_file_list = ["data_zb_f_ESresult.txt", "kexue_2018jingbian_ESresult.txt",
-                       "kexue_exercise_ESresult.txt", "network_exam_ESresult.txt",
-                       "network_exercise_ESresult.txt","renwei_exercise_ESresult.txt",
-                       "renwei_exam_not2017_ESresult.txt", "zhuojian_notlc_ESresult.txt",
-                       "yishijie_ESresult.txt","zhuojian_lc_ESresult.txt"]
+# train_dev_file_list = ["data_zb_f_ESresult.txt", "kexue_2018jingbian_ESresult.txt",
+#                        "kexue_exercise_ESresult.txt", "network_exam_ESresult.txt",
+#                        "network_exercise_ESresult.txt","renwei_exercise_ESresult.txt",
+#                        "renwei_exam_not2017_ESresult.txt", "zhuojian_notlc_ESresult.txt",
+#                        "yishijie_ESresult.txt","zhuojian_lc_ESresult.txt"]
+train_dev_file_list = ["zhuojian_notlc_ESresult.txt"]
 test_file_list = ['renwei_exam_2017_ESresult.txt']
 
-out_train_file = path + "v6/v6_train.json"
-out_dev_file = path + "v6/v6_dev.json"
-out_test_file = path + 'v6/v6_test.json'
+out_train_file = path + "v6_for_try/v6_train.json"
+out_dev_file = path + "v6_for_try/v6_dev.json"
+out_test_file = path + 'v6_for_try/v6_test.json'
 
 exe_subname = ["A", "B", "C", "D", "E"]
 
@@ -208,7 +209,7 @@ def main():
 
     print("train and dev execute begin......")
     train_dev_samples = integrate_files(train_dev_file_list, 'train')
-    split_train_and_dev_dataset(train_dev_samples, out_train_file, out_dev_file, train_num=310000, dev_num=14596)
+    split_train_and_dev_dataset(train_dev_samples, out_train_file, out_dev_file, train_num=140000, dev_num=9009)
 
     print("completed ......")
 

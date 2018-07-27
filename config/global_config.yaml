@@ -3,14 +3,15 @@ data:
     train_path: /m/liyz/MedQA-workspace/rawdata/es_result_0713_production_idx/v6/v6_train.json.310000
     dev_path: /m/liyz/MedQA-workspace/rawdata/es_result_0713_production_idx/v6/v6_dev.json.13441
     test_path: /m/liyz/MedQA-workspace/rawdata/es_result_0713_production_idx/v6/v6_test.json.600
-  dataset_h5: /m/liyz/MedQA-workspace/v1.0/data/v6_31w_with297k_embedding_maxcontentlen200_withlogic.h5  #保存预处理的数据，embedding，w2id等
+  dataset_h5: /m/liyz/MedQA-workspace/v1.0/data/v6_31w_with366k_embedding_maxcontentlen200_withlogic.h5  #保存预处理的数据，embedding，w2id等
   ignore_max_len: 200 # in train data, context token len > ignore_max_len will be dropped
   ignore_max_ques_ans_len: 100
 
-  embedding_path: data/corpus_embedding_297k_200.txt   # data/glove.840B.300d.zip
+  embedding_path: data/corpus_0711_366k_200.txt   # data/glove.840B.300d.zip
   vocabulary_path: data/vocabulary
+  vacabulary_nums: 365552
 
-  model_path: checkpoint/pkumi2_2018-07-17-00_50_30_v6data_scratch_lr=1e-4_model_weight.pt
+  model_path:  checkpoint/panda5_2018-07-24-20_22_50_v2_31w_366kembedding_lr=-3_model_weight.pt
   model_weight_dir: checkpoint/
   checkpoint_path: checkpoint/
 
@@ -20,16 +21,16 @@ model:
 
 global:
   random_seed: 123
-  model: SeaReader_5c   #SeaReader
+  model: SeaReader_v3   #SeaReader
    #match-lstm+ # 'match-lstm', 'match-lstm+', 'r-net' or 'base'. Note that 'base' model is customized by base_model.yaml
 
 train:
   continue: False # 默认是不是继续上次训练
   keep_embedding: True # 是否保留weight里的embedding
-  batch_size: 150  #最好是5的倍数，便于计算准确率
-  valid_batch_size: 150 #default 32
-  test_batch_size: 150
-  epoch: 100
+  batch_size: 100  #最好是5的倍数，便于计算准确率
+  valid_batch_size: 100 #default 32
+  test_batch_size: 100
+  epoch: 50
   enable_cuda: True
 
   optimizer: 'adam'  # adam, sgd, adamax, adadelta(default is adamax)

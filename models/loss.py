@@ -8,18 +8,56 @@ import torch.nn.functional as F
 from IPython import embed
 
 class Embedding_reg_L21_Loss(torch.nn.modules.loss._Loss):
-    def __init__(self,c=0.1):
+    def __init__(self,c=1):
         super(Embedding_reg_L21_Loss, self).__init__()
         self.c=c
     def forward(self, y_pred, y_true):
         torch.nn.modules.loss._assert_no_grad(y_true)
         weight_change = y_pred-y_true #size=(355921,200)
         loss=weight_change**2 #size=(355921,200)
-        loss=torch.sum(loss,0)#size=(355921,1)
+        loss=torch.sum(loss,1)#size=(355921,1)
+        loss+=(1e-8)
         loss=loss**0.5#size=(355921,1)
         loss=torch.sum(loss)#size=(1)
         loss=loss*self.c
         return loss
+
+class delta_embedding_Loss(torch.nn.modules.loss._Loss):
+    def __init__(self,c=1):
+        super(delta_embedding_Loss, self).__init__()
+        self.c=c
+    def forward(self,weight_change):
+        loss=weight_change**2 #size=(355921,200)
+        loss=torch.sum(loss,1)#size=(355921,1)
+        loss += (1e-8)
+        loss=loss**0.5#size=(355921,1)
+        loss=torch.mean(loss)#size=(1)
+        loss=loss*self.c
+        return loss
+
+# return max(false_score-true_score+delta , 0)
+class SVM_loss(torch.nn.modules.loss._Loss):
+    def __init__(self,delta=0.5,mean=True):
+        super(SVM_loss,self).__init__()
+        self.delta=delta
+        self.mean=mean
+    def forward(self,pred_score,real_label):
+        # pred_score size is 16,5
+        # real_label size is 16 where element is between 0 and 4
+        batch_size=pred_score.size()[0]
+        class_nums=pred_score.size()[1]
+        true_score=pred_score[range(batch_size),real_label] # batch
+        true_score=true_score.unsqueeze(1).repeat(1,class_nums) #batch*5
+
+        score_gap=pred_score-true_score
+        score_gap=score_gap+self.delta
+
+        score_gap[score_gap<0]=0
+        loss=torch.sum(score_gap)
+        if self.mean:
+            loss=loss/batch_size
+        return loss
+
 
 class gate_Loss(torch.nn.modules.loss._Loss):
     def __init__(self,c=0.1,t=0.7):
