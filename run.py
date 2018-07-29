@@ -11,6 +11,7 @@ from test import test
 from debug import debug
 from train import train
 from train_5c import train_5c
+from train_no_content import train_no_content
 from utils.load_config import init_logging, read_config
 from dataset.preprocess_data import PreprocessData
 from queue import Queue
@@ -52,6 +53,8 @@ elif args.mode == 'test':
     test(args.config_path, experiment_info)
 elif args.mode == 'train_5c':
     train_5c(args.config_path,experiment_info,training_info)
+elif args.mode =='train_no_content':
+    train_no_content(args.config_path,experiment_info,training_info)
 else:
     raise ValueError('Unrecognized mode selected.')
 

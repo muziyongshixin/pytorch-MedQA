@@ -17,7 +17,7 @@ from dataset.MedQA_dataset import MedQADataset
 from models import *
 from models.loss import gate_Loss, Embedding_reg_L21_Loss,delta_embedding_Loss,SVM_loss
 from utils.load_config import init_logging, read_config
-from utils.eval_5c import eval_on_model_5c
+from utils.eval_no_content import eval_no_content
 from utils.functions import pop_dict_keys
 from IPython import embed
 from torch.nn import CrossEntropyLoss
@@ -72,7 +72,7 @@ def weights_init(m):
             pass
 
 
-def train_5c(config_path, experiment_info, thread_queue):
+def train_no_content(config_path, experiment_info, thread_queue):
     logger.info('------------MedQA v1.0 Train--------------')
     logger.info('============================loading config file... print config file =========================')
     global_config = read_config(config_path)
@@ -136,7 +136,7 @@ def train_5c(config_path, experiment_info, thread_queue):
     #         break
     # init_embedding_weight = model.state_dict()[embedding_layer_name].clone()
 
-    task_criterion = CrossEntropyLoss().to(device)
+    task_criterion = SVM_loss().to(device)
     gate_criterion = gate_Loss().to(device)
     embedding_criterion = delta_embedding_Loss(c=1).to(device)
     all_criterion = [task_criterion, gate_criterion, embedding_criterion]
@@ -190,8 +190,8 @@ def train_5c(config_path, experiment_info, thread_queue):
     # tensorboardX writer
     tensorboard_writer = SummaryWriter(log_dir=os.path.join('tensorboard_logdir', experiment_info))
 
-    save_cur_experiment_code_path = "savedcodes/" + experiment_info
-    save_current_codes(save_cur_experiment_code_path, global_config)
+    # save_cur_experiment_code_path = "savedcodes/" + experiment_info
+    # save_current_codes(save_cur_experiment_code_path, global_config)
 
     best_valid_acc = None
     # every epoch
@@ -275,14 +275,14 @@ def train_on_model(model, criterion, optimizer, batch_data, epoch, clip_grad_max
         if len(sample_ids) % (5 * gpu_nums) != 0:
             logger.info("batch num is incorrect, ignore this batch")
             continue
-        contents = contents.to(device)
-        question_ans = question_ans.to(device)
+        question = question.to(device)
+        ans = ans.to(device)
         sample_labels = sample_labels.to(device)
         sample_labels = torch.argmax(sample_labels.resize_(int(sample_labels.size()[0] / 5), 5), dim=1)
         sample_logics = sample_logics.to(device)
         # contents:batch_size*10*200,  question_ans:batch_size*100  ,sample_labels=batchsize
         # forward
-        pred_labels = model.forward(contents, question_ans, sample_logics)  # pred_labels size=(batch,2)
+        pred_labels = model.forward(question, ans, sample_logics)  # pred_labels size=(batch,2)
         # get task loss
         task_loss = criterion[0].forward(pred_labels, sample_labels)
         # gate_loss
@@ -325,7 +325,7 @@ def train_on_model(model, criterion, optimizer, batch_data, epoch, clip_grad_max
         if i % 200 == 0:
             model.eval()
             with torch.no_grad():
-                test_avg_loss, test_avg_problem_acc = eval_on_model_5c(model=model,
+                test_avg_loss, test_avg_problem_acc = eval_no_content(model=model,
                                                                        criterion=criterion,
                                                                        batch_data=batch_test_data,
                                                                        epoch=test_epoch,
@@ -338,7 +338,7 @@ def train_on_model(model, criterion, optimizer, batch_data, epoch, clip_grad_max
         if (batch_cnt>2000 and i%2000==0 and i!=0) or (batch_cnt<2000 and i%2000==0) :
             with torch.no_grad():
                 model.eval()  # let training = False, make sure right dropout
-                val_avg_loss, val_avg_problem_acc = eval_on_model_5c(model=model,
+                val_avg_loss, val_avg_problem_acc = eval_no_content(model=model,
                                                                      criterion=criterion,
                                                                      batch_data=batch_dev_data,
                                                                      epoch=val_epoch,
@@ -438,4 +438,3 @@ if __name__ == '__main__':
     parser.add_argument('--config', '-c', required=False, dest='config_path', default='config/global_config.yaml')
     args = parser.parse_args()
 
-    train(args.config_path)

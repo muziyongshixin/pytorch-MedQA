@@ -50,7 +50,7 @@ class SeaReader_v3(torch.nn.Module):
 
         gate_choose="FC"
 
-        self.use_content_nums=1
+        self.use_content_nums=10
         self.hidden_size=hidden_size
 
         # construct model

@@ -3,15 +3,17 @@ data:
     train_path: /m/liyz/MedQA-workspace/rawdata/es_result_0713_production_idx/v6/v6_train.json.310000
     dev_path: /m/liyz/MedQA-workspace/rawdata/es_result_0713_production_idx/v6/v6_dev.json.13441
     test_path: /m/liyz/MedQA-workspace/rawdata/es_result_0713_production_idx/v6/v6_test.json.600
-  dataset_h5: /m/liyz/MedQA-workspace/v1.0/data/v6_31w_with366k_embedding_maxcontentlen200_withlogic.h5  #保存预处理的数据，embedding，w2id等
-  ignore_max_len: 200 # in train data, context token len > ignore_max_len will be dropped
+  dataset_h5: /m/liyz/MedQA-workspace/v1.0/data/v6_31w_with366k_embedding_qas100_cont100_q60_a12_withlogicAndCategory.h5  #保存预处理的数据，embedding，w2id等
+  ignore_max_len: 100 # in train data, context token len > ignore_max_len will be dropped
   ignore_max_ques_ans_len: 100
+  ignore_max_question_len: 60
+  ignore_max_ans_len: 12
 
   embedding_path: data/corpus_0711_366k_200.txt   # data/glove.840B.300d.zip
   vocabulary_path: data/vocabulary
   vacabulary_nums: 365552
 
-  model_path:  checkpoint/panda5_2018-07-24-20_22_50_v2_31w_366kembedding_lr=-3_model_weight.pt
+  model_path:  checkpoint/panda2_2018-07-26-17_35_57_1content_batch100_model_weight.pt
   model_weight_dir: checkpoint/
   checkpoint_path: checkpoint/
 
@@ -21,7 +23,7 @@ model:
 
 global:
   random_seed: 123
-  model: SeaReader_v3   #SeaReader
+  model: No_content_model   #SeaReader
    #match-lstm+ # 'match-lstm', 'match-lstm+', 'r-net' or 'base'. Note that 'base' model is customized by base_model.yaml
 
 train:

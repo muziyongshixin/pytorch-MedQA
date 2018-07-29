@@ -8,7 +8,7 @@ from IPython import  embed
 
 logger = logging.getLogger(__name__)
 gpu_nums=torch.cuda.device_count()
-def eval_on_model_5c(model, criterion, batch_data, epoch, device, eval_dataset=''):
+def eval_no_content(model, criterion, batch_data, epoch, device, eval_dataset=''):
     """
     evaluate on a specific trained model
     :param enable_char:
@@ -27,20 +27,22 @@ def eval_on_model_5c(model, criterion, batch_data, epoch, device, eval_dataset='
     start_time=time.time()
     for i, batch in enumerate(batch_data, 0):
         # batch data
-        contents, question_ans, question, ans, sample_ids, sample_labels, sample_categorys, sample_logics= batch
+        contents, question_ans, question, ans, sample_ids, sample_labels, sample_categorys, sample_logics = batch
+        # # 通过随机跳过实现 shuffle效果
+        # if random.randint(0, 10000) % 2 == 0 and i!=0:
+        #     continue
 
-        if len(sample_ids)%(gpu_nums*5)!=0:
+        if len(sample_ids) % (5 * gpu_nums) != 0:
             logger.info("batch num is incorrect, ignore this batch")
             continue
-        contents = contents.to(device)
-        question_ans = question_ans.to(device)
+        question = question.to(device)
+        ans = ans.to(device)
         sample_labels = sample_labels.to(device)
-        sample_labels=torch.argmax(sample_labels.resize_(int(sample_labels.size()[0]/5),5),dim=1)
+        sample_labels = torch.argmax(sample_labels.resize_(int(sample_labels.size()[0] / 5), 5), dim=1)
         sample_logics = sample_logics.to(device)
-
         # contents:batch_size*10*200,  question_ans:batch_size*100  ,sample_labels=batchsize
         # forward
-        pred_labels = model.forward(contents, question_ans, sample_logics)  # pred_labels size=(batch,2)
+        pred_labels = model.forward(question, ans, sample_logics)  # pred_labels size=(batch,2)
 
         # get task loss
         task_loss = criterion[0].forward(pred_labels, sample_labels)
