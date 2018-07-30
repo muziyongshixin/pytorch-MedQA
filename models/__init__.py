@@ -9,4 +9,5 @@ from .cnn_model import cnn_model
 from .SeaReader_5c import SeaReader_5c
 from .SeaReader_v2 import SeaReader_v2
 from .SeaReader_v3 import SeaReader_v3
+from .SeaReader_v4 import SeaReader_v4
 from .No_content_model import No_content_model

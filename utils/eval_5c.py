@@ -34,13 +34,14 @@ def eval_on_model_5c(model, criterion, batch_data, epoch, device, eval_dataset='
             continue
         contents = contents.to(device)
         question_ans = question_ans.to(device)
+        question = question.to(device)
+        ans = ans.to(device)
         sample_labels = sample_labels.to(device)
-        sample_labels=torch.argmax(sample_labels.resize_(int(sample_labels.size()[0]/5),5),dim=1)
+        sample_labels = torch.argmax(sample_labels.resize_(int(sample_labels.size()[0] / 5), 5), dim=1)
         sample_logics = sample_logics.to(device)
-
         # contents:batch_size*10*200,  question_ans:batch_size*100  ,sample_labels=batchsize
         # forward
-        pred_labels = model.forward(contents, question_ans, sample_logics)  # pred_labels size=(batch,2)
+        pred_labels = model.forward(contents, question_ans, sample_logics, question, ans)  # pred_labels size=(batch,2)
 
         # get task loss
         task_loss = criterion[0].forward(pred_labels, sample_labels)

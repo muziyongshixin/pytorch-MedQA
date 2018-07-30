@@ -10,15 +10,19 @@ from dataset.preprocess_data import PreprocessData
 from utils.functions import masked_softmax, compute_mask, masked_flip
 from IPython import embed
 import numpy as np
+
+
 class Word2VecEmbedding(torch.nn.Module):
 
     def __init__(self, dataset_h5_path, trainable=False):
         super(Word2VecEmbedding, self).__init__()
         self.dataset_h5_path = dataset_h5_path
         n_embeddings, len_embedding, weights = self.load_glove_hdf5()
-        self.embedding_layer = torch.nn.Embedding(num_embeddings=n_embeddings, embedding_dim=len_embedding,_weight=weights)
+        self.embedding_layer = torch.nn.Embedding(num_embeddings=n_embeddings, embedding_dim=len_embedding,
+                                                  _weight=weights)
         if not trainable:
             self.embedding_layer.weight.requires_grad = False
+
     def load_glove_hdf5(self):
         with h5py.File(self.dataset_h5_path, 'r') as f:
             f_meta_data = f['meta_data']
@@ -35,31 +39,38 @@ class Word2VecEmbedding(torch.nn.Module):
         out_emb = tmp_emb
         return out_emb, mask
 
+
 class delta_Embedding(torch.nn.Module):
-    def __init__(self, n_embeddings,len_embedding,init_uniform, trainable=True):
+    def __init__(self, n_embeddings, len_embedding, init_uniform, trainable=True):
         super(delta_Embedding, self).__init__()
-        weights=torch.randn(n_embeddings,len_embedding)
-        weights.uniform_(-1*init_uniform,init_uniform)
-        self.embedding_layer = torch.nn.Embedding(num_embeddings=n_embeddings, embedding_dim=len_embedding,_weight=weights)
+        weights = torch.randn(n_embeddings, len_embedding)
+        weights.uniform_(-1 * init_uniform, init_uniform)
+        self.embedding_layer = torch.nn.Embedding(num_embeddings=n_embeddings, embedding_dim=len_embedding,
+                                                  _weight=weights)
         if not trainable:
             self.embedding_layer.weight.requires_grad = False
+
     def forward(self, x):
         return self.embedding_layer.forward(x)
 
 
 class My_gate_layer(torch.nn.Module):
     """使用conv操作或者FC实现gating 的功能"""
-    def __init__(self,context_dim,gate_choose):
+
+    def __init__(self, context_dim, gate_choose,dropout_p=0.0):
         super(My_gate_layer, self).__init__()
-        self.gate_choose=gate_choose
-        if gate_choose=="CNN":
-            self.gate_layer=torch.nn.Sequential(
-            torch.nn.Conv1d(in_channels=context_dim,out_channels=1,kernel_size=3,stride=1,padding=1),  #16*1*100
-            torch.nn.Sigmoid())
-        elif gate_choose=="FC":
-            self.gate_layer=torch.nn.Sequential(
-                torch.nn.Linear(in_features=context_dim,out_features=1),
+        self.gate_choose = gate_choose
+        self.dropout_p=dropout_p
+        if gate_choose == "CNN":
+            self.gate_layer = torch.nn.Sequential(
+                torch.nn.Conv1d(in_channels=context_dim, out_channels=1, kernel_size=3, stride=1, padding=1),
+                # 16*1*100
                 torch.nn.Sigmoid())
+        elif gate_choose == "FC":
+            self.gate_layer = torch.nn.Sequential(
+                torch.nn.Linear(in_features=context_dim, out_features=1),
+                torch.nn.Sigmoid()
+            )
             self.init_parameters()
 
     def init_parameters(self):
@@ -69,33 +80,40 @@ class My_gate_layer(torch.nn.Module):
         ih = (param for name, param in self.named_parameters() if 'weight' in name)
         for t in ih:
             torch.nn.init.xavier_uniform_(t)
+
     def forward(self, x):
-        if self.gate_choose=="CNN":
-            x=x.transpose(1,2) #size(16,256,100)
+        if self.dropout_p != 0:
+            x = torch.nn.functional.dropout(x, self.dropout_p, self.training)
+        if self.gate_choose == "CNN":
+            x = x.transpose(1, 2)  # size(16,256,100)
             output = self.gate_layer.forward(x)
-            return output.transpose(1,2) #size=(16,100,1)
-        elif self.gate_choose=="FC":
-            batch_size=x.size()[0]
-            seq_len=x.size()[1]
-            context_dim=x.size()[2]
-            x=x.view(batch_size*seq_len,context_dim) #size(1600,256)
-            output=self.gate_layer.forward(x) #size(1600,1)
-            output=output.view(batch_size,seq_len,1) #size(16,100,1)
+            return output.transpose(1, 2)  # size=(16,100,1)
+        elif self.gate_choose == "FC":
+            batch_size = x.size()[0]
+            seq_len = x.size()[1]
+            context_dim = x.size()[2]
+            x = x.view(batch_size * seq_len, context_dim)  # size(1600,256)
+            output = self.gate_layer.forward(x)  # size(1600,1)
+            output = output.view(batch_size, seq_len, 1)  # size(16,100,1)
             return output
 
+
 class Noise_gate(torch.nn.Module):
-    def __init__(self,context_dim,gate_choose):
+    def __init__(self, context_dim, gate_choose,dropout_p=0.0):
         super(Noise_gate, self).__init__()
-        self.gate_choose=gate_choose
-        if gate_choose=="CNN":
-            self.gate_layer=torch.nn.Sequential(
-            torch.nn.Conv1d(in_channels=context_dim,out_channels=1,kernel_size=3,stride=1,padding=1),  #16*1*100
-            torch.nn.Sigmoid())
-        elif gate_choose=="FC":
-            self.gate_layer=torch.nn.Sequential(
-                torch.nn.Linear(in_features=context_dim,out_features=1),
+        self.gate_choose = gate_choose
+        self.dropout_p=dropout_p
+        if gate_choose == "CNN":
+            self.gate_layer = torch.nn.Sequential(
+                torch.nn.Conv1d(in_channels=context_dim, out_channels=1, kernel_size=3, stride=1, padding=1),
+                # 16*1*100
+                torch.nn.Sigmoid())
+        elif gate_choose == "FC":
+            self.gate_layer = torch.nn.Sequential(
+                torch.nn.Linear(in_features=context_dim, out_features=1),
                 torch.nn.Sigmoid())
             self.init_parameters()
+
     def init_parameters(self):
         """
         Here we reproduce Keras default initialization weights to initialize FC weights
@@ -103,28 +121,33 @@ class Noise_gate(torch.nn.Module):
         ih = (param for name, param in self.named_parameters() if 'weight' in name)
         for t in ih:
             torch.nn.init.xavier_uniform_(t)
+
     def forward(self, x):
-        if self.gate_choose=="CNN":
-            x=x.transpose(1,2) #size(16,256,100)
+        if self.dropout_p != 0:
+            x = torch.nn.functional.dropout(x, self.dropout_p, self.training)
+        if self.gate_choose == "CNN":
+            x = x.transpose(1, 2)  # size(16,256,100)
             output = self.gate_layer.forward(x)
-            output=output.transpose(1, 2)
-            noise = torch.from_numpy(np.random.normal(loc=0.0, scale=0.1,size=output.size())).float().to(torch.device("cuda"))
+            output = output.transpose(1, 2)
+            noise = torch.from_numpy(np.random.normal(loc=0.0, scale=0.1, size=output.size())).float().to(
+                torch.device("cuda"))
             if self.training:
-                return output+noise
+                return output + noise
             else:
-                return  output #size=(16,100,1)
-        elif self.gate_choose=="FC":
-            batch_size=x.size()[0]
-            seq_len=x.size()[1]
-            context_dim=x.size()[2]
-            x=x.view(batch_size*seq_len,context_dim) #size(1600,256)
-            output=self.gate_layer.forward(x) #size(1600,1)
-            output=output.view(batch_size,seq_len,1) #size(16,100,1)
-            noise = torch.from_numpy(np.random.normal(loc=0.0, scale=0.1, size=output.size())).float().to(torch.device("cuda"))
-            if self.training:  #eval 模式不添加noise
-                return output+noise
+                return output  # size=(16,100,1)
+        elif self.gate_choose == "FC":
+            batch_size = x.size()[0]
+            seq_len = x.size()[1]
+            context_dim = x.size()[2]
+            x = x.view(batch_size * seq_len, context_dim)  # size(1600,256)
+            output = self.gate_layer.forward(x)  # size(1600,1)
+            output = output.view(batch_size, seq_len, 1)  # size(16,100,1)
+            noise = torch.from_numpy(np.random.normal(loc=0.0, scale=0.1, size=output.size())).float().to(
+                torch.device("cuda"))
+            if self.training:  # eval 模式不添加noise
+                return output + noise
             else:
-                return  output #size=(16,100,1)
+                return output  # size=(16,100,1)
 
 
 class MyLSTM(torch.nn.Module):
@@ -148,6 +171,7 @@ class MyLSTM(torch.nn.Module):
         - **last_state** (batch, hidden_size * num_directions): the final hidden state of rnn
 
     """
+
     def __init__(self, mode, input_size, hidden_size, num_layers, bidirectional, dropout_p, enable_layer_norm=False):
         super(MyLSTM, self).__init__()
         self.mode = mode
@@ -198,8 +222,8 @@ class MyLSTM(torch.nn.Module):
             v = v.view(-1, input_size)
             v = self.layer_norm(v)
             v = v.view(seq_len, batch, input_size)
-        #当前的sentence padding到的长度
-        sentence_len=v.size()[1]
+        # 当前的sentence padding到的长度
+        sentence_len = v.size()[1]
         # get sorted v
         lengths = mask.eq(1).long().sum(1)
         #  表示mask中，每个sentence1的个数  tensor([  58,  139,   75,  174,   64,   52,   52,  104,   49,   97, 119,   57,   50,  199,   99,  178], device='cuda:0')
@@ -212,10 +236,10 @@ class MyLSTM(torch.nn.Module):
         # idx_unsort表示原始v中每个sentence的长度排第几
         # =tensor([ 10,   3,   8,   2,   9,  12,  13,   5,  15,   7,   4,  11,   14,   0,   6,   1]
         v_sort = v.index_select(0, idx_sort)
-        #v_sort表示根据长度排序后的sentence向量，最长的放在前面，最短的放在后面
-        #v_sort.size()=[16,100,200],v_sort[49,15]=[0,0,0,...,0,0,0],因为最后一个sentence的单词只有49个，所以49之后的词向量都是0向量
+        # v_sort表示根据长度排序后的sentence向量，最长的放在前面，最短的放在后面
+        # v_sort.size()=[16,100,200],v_sort[49,15]=[0,0,0,...,0,0,0],因为最后一个sentence的单词只有49个，所以49之后的词向量都是0向量
 
-        v_pack = torch.nn.utils.rnn.pack_padded_sequence(v_sort, lengths_sort,batch_first=True)
+        v_pack = torch.nn.utils.rnn.pack_padded_sequence(v_sort, lengths_sort, batch_first=True)
         # v_pack是一个PackedSequence的对象，其中包含data，和batch_sizes，两个子对象
         # data中存的计算的数据，是一个torch.Size([1566, 200])的矩阵，前16个是所有sentence的第一个单词，最后一个是最长的那个sentence的最后一个单词
         # batch_sizes中存储的是每一个计算步所需要计算的sentence数
@@ -245,10 +269,11 @@ class MyLSTM(torch.nn.Module):
         o_pack, _ = self.hidden.forward(v_pack)  # 经过lstm层
         # o_pack_dropout.data是torch.Size([1566, 256]) 因为是双向LSTM 维度为128*2
         # embed()
-        o_pack_dropout=self.dropout(o_pack.data)
+        o_pack_dropout = self.dropout(o_pack.data)
         o_pack_dropout_p = torch.nn.utils.rnn.PackedSequence(o_pack_dropout, v_pack.batch_sizes)
 
-        o, _ = torch.nn.utils.rnn.pad_packed_sequence(o_pack_dropout_p,batch_first=True,padding_value=0.0,total_length=sentence_len)
+        o, _ = torch.nn.utils.rnn.pad_packed_sequence(o_pack_dropout_p, batch_first=True, padding_value=0.0,
+                                                      total_length=sentence_len)
         # o是经过lstm并解包之后的context向量 torch.Size([199, 16, 256])
 
         # unsorted o
@@ -259,10 +284,9 @@ class MyLSTM(torch.nn.Module):
         return o_unsort
 
 
-
-class self_attentioin_layer(torch.nn.Module):
-    def __init__(self,dataset_h5_path):
-        super(self_attentioin_layer,self).__init__()
+class qa_matching_layer(torch.nn.Module):
+    def __init__(self,R):
+        super(qa_matching_layer,self).__init__()
         hidden_mode='LSTM'
         word_embedding_size=200
         hidden_size=150
@@ -270,10 +294,13 @@ class self_attentioin_layer(torch.nn.Module):
         encoder_bidirection=True
         dropout_p=0.3
         ws_factor=1
-        R=10
+        self.R=R
         embedding_trainable=False
+        vocabulary_size=365553
 
-        self.embedding_layer=Word2VecEmbedding(dataset_h5_path=dataset_h5_path, trainable=embedding_trainable)
+        # self.fixed_embedding=Word2VecEmbedding(dataset_h5_path=dataset_h5_path, trainable=embedding_trainable)
+        # self.delta_embedding = delta_Embedding(n_embeddings=vocabulary_size, len_embedding=word_embedding_size,
+        #                                        init_uniform=0.1, trainable=True)
         self.question_context_layer=MyLSTM(mode=hidden_mode,
                                        input_size=word_embedding_size,
                                        hidden_size=hidden_size,
@@ -289,23 +316,22 @@ class self_attentioin_layer(torch.nn.Module):
         self.question_attention_layer = torch.nn.Sequential(
             torch.nn.Linear(in_features=hidden_size * 2, out_features=ws_factor * hidden_size),
             torch.nn.Tanh(),
-            torch.nn.Linear(in_features=ws_factor * hidden_size, out_features=R)
+            torch.nn.Linear(in_features=ws_factor * hidden_size, out_features=self.R)
         )
         self.answer_attention_layer=torch.nn.Sequential(
             torch.nn.Linear(in_features=hidden_size*2,out_features=ws_factor*hidden_size),
             torch.nn.Tanh(),
-            torch.nn.Linear(in_features=ws_factor*hidden_size,out_features=R)
+            torch.nn.Linear(in_features=ws_factor*hidden_size,out_features=self.R)
        )
 
         self.output_layer=torch.nn.Linear(in_features=R,out_features=1)
-    def forward(self, questions,answers):
+    def forward(self, questions_vec,question_mask,answers_vec,answers_mask):
         # questions 20,60
         # answers 20,12
-        questions_vec=self.embedding_layer(questions)       #batch 60 200
-        answers_vec=self.embedding_layer(answers) #batch 12 200
+        batch_size=questions_vec.size()[0]
 
-        questions_encode=self.question_context_layer(questions_vec) #batch 60 300
-        answers_encode=self.answer_context_layer(answers_vec) #batch 12 300
+        questions_encode=self.question_context_layer(questions_vec,question_mask) #batch 60 300
+        answers_encode=self.answer_context_layer(answers_vec,answers_mask) #batch 12 300
 
         questions_attention=self.question_attention_layer(questions_encode)  #batch 60 10
         answers_attention=self.answer_attention_layer(answers_encode) #batch 12 10
@@ -318,9 +344,7 @@ class self_attentioin_layer(torch.nn.Module):
 
         match_feature=questions_match*answers_match #batch 300 10
         sum_match_feature=torch.sum(match_feature,dim=1) #batch  10
-
-        output=self.output_layer(sum_match_feature) #batch 1
-        return output
+        return sum_match_feature
 
 class GloveEmbedding(torch.nn.Module):
     """
@@ -333,12 +357,14 @@ class GloveEmbedding(torch.nn.Module):
         **output** (seq_len, batch, embedding_size): tensor that change word index to word embeddings
         **mask** (batch, seq_len): tensor that show which index is padding
     """
-    def __init__(self, dataset_h5_path,trainable=False):
+
+    def __init__(self, dataset_h5_path, trainable=False):
         super(GloveEmbedding, self).__init__()
         self.dataset_h5_path = dataset_h5_path
         n_embeddings, len_embedding, weights = self.load_glove_hdf5()
 
-        self.embedding_layer = torch.nn.Embedding(num_embeddings=n_embeddings, embedding_dim=len_embedding, _weight=weights)
+        self.embedding_layer = torch.nn.Embedding(num_embeddings=n_embeddings, embedding_dim=len_embedding,
+                                                  _weight=weights)
         if not trainable:
             self.embedding_layer.weight.requires_grad = False
 
@@ -378,7 +404,7 @@ class CharEmbedding(torch.nn.Module):
         n_embedding = self.load_dataset_h5()
 
         self.embedding_layer = torch.nn.Embedding(num_embeddings=n_embedding, embedding_dim=embedding_size,
-                                                  padding_idx=0)    #0 号char输出的向量是0向量
+                                                  padding_idx=0)  # 0 号char输出的向量是0向量
 
         # Note that cannot directly assign value. When in predict, it's always False.
         if not trainable:
@@ -621,7 +647,7 @@ class UniMatchRNN(torch.nn.Module):
         context_len = Hp.shape[0]
 
         # init hidden with the same type of input data
-        h_0 = Hq.new_zeros(batch_size, self.hidden_size) #Hq 100,16,256， h_0 16,256
+        h_0 = Hq.new_zeros(batch_size, self.hidden_size)  # Hq 100,16,256， h_0 16,256
         hidden = [(h_0, h_0)] if self.mode == 'LSTM' else [h_0]
         vis_para = {}
         vis_alpha = []
@@ -634,7 +660,8 @@ class UniMatchRNN(torch.nn.Module):
             alpha = self.attention.forward(cur_hp, Hq, attention_input, Hq_mask)  # (batch, question_len) 16,100
             vis_alpha.append(alpha)
 
-            question_alpha = torch.bmm(alpha.unsqueeze(1), Hq.transpose(0, 1)).squeeze(1)  #  16,1,100 * 16,100,256 (batch, input_size)
+            question_alpha = torch.bmm(alpha.unsqueeze(1), Hq.transpose(0, 1)).squeeze(
+                1)  # 16,1,100 * 16,100,256 (batch, input_size)
             cur_z = torch.cat([cur_hp, question_alpha], dim=1)  # (batch, rnn_in_size)
 
             # gated
@@ -695,7 +722,8 @@ class MatchRNN(torch.nn.Module):
         Hp = self.dropout(Hp)
         Hq = self.dropout(Hq)
         # Hp 200,16,256   Hq 100,16,256
-        left_hidden, left_para = self.left_match_rnn.forward(Hp, Hq, Hq_mask)   #left_hidden (context_len, batch, hidden_size)
+        left_hidden, left_para = self.left_match_rnn.forward(Hp, Hq,
+                                                             Hq_mask)  # left_hidden (context_len, batch, hidden_size)
         rtn_hidden = left_hidden
         rtn_para = {'left': left_para}
 
@@ -847,7 +875,7 @@ class UniBoundaryPointer(torch.nn.Module):
                 .squeeze(1)  # (batch, input_size)
 
             if self.enable_layer_norm:
-                context_beta = self.layer_norm(context_beta)    # (batch, input_size)
+                context_beta = self.layer_norm(context_beta)  # (batch, input_size)
 
             hidden = self.hidden_cell.forward(context_beta, hidden)  # (batch, hidden_size), (batch, hidden_size)
 
@@ -871,6 +899,7 @@ class BoundaryPointer(torch.nn.Module):
     Outputs:
         **output** (answer_len, batch, context_len): start and end answer index possibility position in context
     """
+
     def __init__(self, mode, input_size, hidden_size, bidirectional, dropout_p, enable_layer_norm):
         super(BoundaryPointer, self).__init__()
         self.bidirectional = bidirectional
@@ -916,6 +945,7 @@ class MultiHopBdPointer(torch.nn.Module):
     Outputs:
         **output** (answer_len, batch, context_len): start and end answer index possibility position in context
     """
+
     def __init__(self, mode, input_size, hidden_size, num_hops, dropout_p, enable_layer_norm):
         super(MultiHopBdPointer, self).__init__()
         self.hidden_size = hidden_size
@@ -930,7 +960,7 @@ class MultiHopBdPointer(torch.nn.Module):
         beta_last = None
         for i in range(self.num_hops):
             beta, h_0 = self.ptr_rnn.forward(Hr, Hr_mask, h_0)
-            if beta_last is not None and (beta_last == beta).sum().item() == beta.shape[0]:     # beta not changed
+            if beta_last is not None and (beta_last == beta).sum().item() == beta.shape[0]:  # beta not changed
                 break
 
             beta_last = beta
@@ -1026,8 +1056,8 @@ class MyRNNBase(torch.nn.Module):
         # =tensor([ 10,   3,   8,   2,   9,  12,  13,   5,  15,   7,   4,  11,   14,   0,   6,   1]
         # embed()
         v_sort = v.index_select(1, idx_sort)
-        #v_sort表示根据长度排序后的sentence向量，最长的放在前面，最短的放在后面
-        #v_sort.size()=[200,16,200],v_sort[49,15]=[0,0,0,...,0,0,0],因为最后一个sentence的单词只有49个，所以49之后的词向量都是0向量
+        # v_sort表示根据长度排序后的sentence向量，最长的放在前面，最短的放在后面
+        # v_sort.size()=[200,16,200],v_sort[49,15]=[0,0,0,...,0,0,0],因为最后一个sentence的单词只有49个，所以49之后的词向量都是0向量
 
         v_pack = torch.nn.utils.rnn.pack_padded_sequence(v_sort, lengths_sort)
         # v_pack是一个PackedSequence的对象，其中包含data，和batch_sizes，两个子对象
@@ -1109,7 +1139,7 @@ class AttentionPooling(torch.nn.Module):
         rq = torch.bmm(alpha.unsqueeze(1), uq.transpose(0, 1)) \
             .squeeze(1)  # (batch, input_size)
 
-        rq_o = F.tanh(self.linear_o(rq))    # (batch, output_size)
+        rq_o = F.tanh(self.linear_o(rq))  # (batch, output_size)
         return rq_o
 
 
@@ -1138,7 +1168,7 @@ class SelfAttentionGated(torch.nn.Module):
         g_tanh = F.tanh(self.linear_g(x))
         gt = self.linear_t.forward(g_tanh) \
             .squeeze(2) \
-            .transpose(0, 1)    # (batch, seq_len)
+            .transpose(0, 1)  # (batch, seq_len)
 
         gt_prop = masked_softmax(gt, x_mask, dim=1)
         gt_prop = gt_prop.transpose(0, 1).unsqueeze(2)  # (seq_len, batch, 1)

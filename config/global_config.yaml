@@ -13,7 +13,7 @@ data:
   vocabulary_path: data/vocabulary
   vacabulary_nums: 365552
 
-  model_path:  checkpoint/panda2_2018-07-26-17_35_57_1content_batch100_model_weight.pt
+  model_path:  checkpoint/panda2_2018-07-28-17_07_30_continue_panda2_2018-07-26-17_35_57,using31wdata100contentlen_model_weight.pt
   model_weight_dir: checkpoint/
   checkpoint_path: checkpoint/
 
@@ -23,7 +23,7 @@ model:
 
 global:
   random_seed: 123
-  model: No_content_model   #SeaReader
+  model: SeaReader_v4   #SeaReader
    #match-lstm+ # 'match-lstm', 'match-lstm+', 'r-net' or 'base'. Note that 'base' model is customized by base_model.yaml
 
 train:

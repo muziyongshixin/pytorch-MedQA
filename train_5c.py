@@ -116,6 +116,8 @@ def train_5c(config_path, experiment_info, thread_queue):
         model = SeaReader_v2(dataset_h5_path, device)
     elif model_choose == 'SeaReader_v3':
         model =SeaReader_v3(dataset_h5_path,device)
+    elif model_choose=='SeaReader_v4':
+        model=SeaReader_v4(dataset_h5_path,device)
     elif model_choose=='No_content_model':
         model= No_content_model(dataset_h5_path)
     else:
@@ -277,12 +279,14 @@ def train_on_model(model, criterion, optimizer, batch_data, epoch, clip_grad_max
             continue
         contents = contents.to(device)
         question_ans = question_ans.to(device)
+        question=question.to(device)
+        ans=ans.to(device)
         sample_labels = sample_labels.to(device)
         sample_labels = torch.argmax(sample_labels.resize_(int(sample_labels.size()[0] / 5), 5), dim=1)
         sample_logics = sample_logics.to(device)
         # contents:batch_size*10*200,  question_ans:batch_size*100  ,sample_labels=batchsize
         # forward
-        pred_labels = model.forward(contents, question_ans, sample_logics)  # pred_labels size=(batch,2)
+        pred_labels = model.forward(contents, question_ans, sample_logics,question,ans)  # pred_labels size=(batch,2)
         # get task loss
         task_loss = criterion[0].forward(pred_labels, sample_labels)
         # gate_loss

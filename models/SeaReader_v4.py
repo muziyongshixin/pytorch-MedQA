@@ -10,26 +10,10 @@ from IPython import embed
 from utils.functions import masked_softmax, compute_mask, masked_flip
 
 
-class SeaReader_v3(torch.nn.Module):
-    """
-    match-lstm+ model for machine comprehension
-    Args:
-        - global_config: model_config with types dictionary
-
-    Inputs:
-        context: (batch, seq_len)
-        question: (batch, seq_len)
-        context_char: (batch, seq_len, word_len)
-        question_char: (batch, seq_len, word_len)
-
-    Outputs:
-        ans_range_prop: (batch, 2, context_len)
-        ans_range: (batch, 2)
-        vis_alpha: to show on visdom
-    """
+class SeaReader_v4(torch.nn.Module):
 
     def __init__(self, dataset_h5_path, device):
-        super(SeaReader_v3, self).__init__()
+        super(SeaReader_v4, self).__init__()
 
         self.device = device
         # set config
@@ -53,11 +37,15 @@ class SeaReader_v3(torch.nn.Module):
         self.use_content_nums = 10
         self.hidden_size = hidden_size
 
+        R=500
+
         # construct model
         self.fixed_embedding = Word2VecEmbedding(dataset_h5_path=dataset_h5_path, trainable=False)
 
         self.delta_embedding = delta_Embedding(n_embeddings=vocabulary_size, len_embedding=word_embedding_size,
                                                init_uniform=0.1, trainable=True)
+
+        self.qa_matching_layer=qa_matching_layer(R)
 
         self.context_layer = MyLSTM(mode=hidden_mode,
                                     input_size=word_embedding_size,
@@ -84,16 +72,23 @@ class SeaReader_v3(torch.nn.Module):
                                                bidirectional=reasoning_layer_bidirection,
                                                dropout_p=dropout_p)
 
-        self.decision_layer = torch.nn.Linear(in_features=hidden_size * 8, out_features=1, bias=True)
+        self.decision_layer = torch.nn.Linear(in_features=hidden_size * 8+R, out_features=1, bias=True)
         torch.nn.init.xavier_uniform_(self.decision_layer.weight)
 
-    def forward(self, contents, question_ans, logics, contents_char=None, question_ans_char=None):
+    def forward(self, contents, question_ans, logics, questions, answers):
         # contents size(16,10,200)
         # question_ans size(16,100)
         batch_size = question_ans.size()[0]
         max_content_len = contents.size()[2]
         max_question_len = question_ans.size()[1]
         contents_num = contents.size()[1]
+
+        # no content features
+        q_vec,q_mask=self.fixed_embedding.forward(questions)
+        q_vec+=self.delta_embedding.forward(questions)
+        a_vec,a_mask=self.fixed_embedding.forward(answers)
+        a_vec+=self.delta_embedding.forward(answers)
+        qa_matching_feature=self.qa_matching_layer(q_vec,q_mask,a_vec,a_mask) #size=(batch,R)
 
         # word-level embedding: (seq_len, batch, embedding_size)
         question_vec, question_mask = self.fixed_embedding.forward(question_ans)  # size=(batch, 100, 200)
@@ -276,6 +271,8 @@ class SeaReader_v3(torch.nn.Module):
         reasoning_out_mean_feature = torch.mean(gated_reasoning_feature, dim=1)  # size=(16,512)
 
         decision_input = torch.cat([reasoning_out_max_feature, reasoning_out_mean_feature], dim=1)  # size(16,1024)
+
+        decision_input=torch.cat([decision_input,qa_matching_feature],dim=1) # size(16,1024+500)
 
         decision_output = self.decision_layer.forward(decision_input)  # size=(16,1)
         logics = logics.resize_(logics.size()[0], 1)
