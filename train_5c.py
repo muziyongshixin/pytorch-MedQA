@@ -15,7 +15,7 @@ import torch.optim as optim
 from dataset.squad_dataset import SquadDataset
 from dataset.MedQA_dataset import MedQADataset
 from models import *
-from models.loss import gate_Loss, Embedding_reg_L21_Loss,delta_embedding_Loss,SVM_loss
+from models.loss import gate_Loss, Embedding_reg_L21_Loss,delta_embedding_Loss,SVM_loss,delta_embedding_sum_Loss
 from utils.load_config import init_logging, read_config
 from utils.eval_5c import eval_on_model_5c
 from utils.functions import pop_dict_keys
@@ -73,6 +73,10 @@ def weights_init(m):
 
 
 def train_5c(config_path, experiment_info, thread_queue):
+    global gpu_nums, init_embedding_weight, batch_test_data, batch_dev_data, tensorboard_writer, test_epoch, embedding_layer_name, val_epoch, global_config, best_valid_acc, train_epoch
+    test_epoch = 0
+    val_epoch = 0
+    train_epoch = 0
     logger.info('------------MedQA v1.0 Train--------------')
     logger.info('============================loading config file... print config file =========================')
     global_config = read_config(config_path)
@@ -82,9 +86,6 @@ def train_5c(config_path, experiment_info, thread_queue):
     seed = global_config['global']['random_seed']
     torch.manual_seed(seed)
 
-    global gpu_nums, init_embedding_weight, batch_test_data,batch_dev_data, tensorboard_writer, test_epoch,embedding_layer_name,val_epoch,global_config,best_valid_acc
-    test_epoch = 0
-    val_epoch = 0
 
     enable_cuda = global_config['train']['enable_cuda']
     device = torch.device("cuda" if enable_cuda else "cpu")
@@ -110,16 +111,20 @@ def train_5c(config_path, experiment_info, thread_queue):
         model = TestModel(dataset_h5_path, device)
     elif model_choose == 'cnn_model':
         model = cnn_model(dataset_h5_path, device)
-    elif model_choose == 'SeaReader_5c':
-        model = SeaReader_5c(dataset_h5_path, device)
     elif model_choose == 'SeaReader_v2':
         model = SeaReader_v2(dataset_h5_path, device)
     elif model_choose == 'SeaReader_v3':
         model =SeaReader_v3(dataset_h5_path,device)
     elif model_choose=='SeaReader_v4':
         model=SeaReader_v4(dataset_h5_path,device)
+    elif model_choose=='SeaReader_v4_5':
+        model=SeaReader_v4_5(dataset_h5_path,device)
+    elif model_choose == 'SeaReader_v5':
+        model = SeaReader_v5(dataset_h5_path, device)
     elif model_choose=='No_content_model':
         model= No_content_model(dataset_h5_path)
+    elif model_choose == 'SeaReader_attention':
+        model= SeaReader_attention(dataset_h5_path,device)
     else:
         raise ValueError('model "%s" in config file not recognized' % model_choose)
     print_network(model)
@@ -147,7 +152,12 @@ def train_5c(config_path, experiment_info, thread_queue):
     optimizer_choose = global_config['train']['optimizer']
     optimizer_lr = global_config['train']['learning_rate']
     optimizer_eps = float(global_config['train']['eps'])
+
     optimizer_param = filter(lambda p: p.requires_grad, model.parameters())
+    # embedding_param=  list(map(id,model.delta_embedding.parameters()))
+    # other_param=filter(lambda p: id(p) not in embedding_param, filter(lambda p: p.requires_grad, model.parameters()))
+    # optimizer_param=[{"params": model.delta_embedding.parameters(), "lr":(2e-4)},
+    #                  {"params": other_param,"lr":optimizer_lr}]
 
     if optimizer_choose == 'adamax':
         optimizer = optim.Adamax(optimizer_param)
@@ -161,7 +171,7 @@ def train_5c(config_path, experiment_info, thread_queue):
     else:
         raise ValueError('optimizer "%s" in config file not recoginized' % optimizer_choose)
 
-    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.2, patience=2, verbose=True)
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=10, verbose=True)
 
     # check if exist model weight
     weight_path = global_config['data']['model_path']
@@ -200,6 +210,8 @@ def train_5c(config_path, experiment_info, thread_queue):
     for epoch in range(global_config['train']['epoch']):
         # train
         model.train()  # set training = True, make sure right dropout
+        if epoch>=2:
+            model.use_content_nums=10
         train_avg_loss, train_avg_problem_acc = train_on_model(model=model,
                                                                criterion=all_criterion,
                                                                optimizer=optimizer,
@@ -229,15 +241,14 @@ def train_5c(config_path, experiment_info, thread_queue):
             #                                                                       enable_char=enable_char,
             #                                                                       batch_char_func=dataset.gen_batch_with_char,
             #                                                                       init_embedding_weight=init_embedding_weight)
-        tensorboard_writer.add_scalar("train/lr", optimizer.param_groups[0]['lr'], epoch)
-        tensorboard_writer.add_scalar("train/avg_loss", train_avg_loss, epoch)
-        tensorboard_writer.add_scalar("train/problem_acc", train_avg_problem_acc, epoch)
+
         # tensorboard_writer.add_scalar("test/avg_loss", test_avg_loss, epoch)
         # tensorboard_writer.add_scalar("test/binary_acc", test_avg_binary_acc, epoch)
         # tensorboard_writer.add_scalar("test/problem_acc", test_avg_problem_acc, epoch)
 
         #  adjust learning rate
         scheduler.step(train_avg_loss)
+        tensorboard_writer.add_scalar("train/lr", optimizer.param_groups[0]['lr'], epoch)
 
     logger.info('finished.................................')
     tensorboard_writer.close()
@@ -259,8 +270,10 @@ def train_on_model(model, criterion, optimizer, batch_data, epoch, clip_grad_max
     """
     global test_epoch
     global val_epoch
+    global train_epoch
     global best_valid_acc
     epoch_loss = AverageMeter()
+    epoch_embedding_loss = AverageMeter()
     epoch_problem_acc = AverageMeter()
     batch_cnt = len(batch_data)
     for i, batch in enumerate(batch_data, 0):
@@ -305,6 +318,7 @@ def train_on_model(model, criterion, optimizer, batch_data, epoch, clip_grad_max
         optimizer.step()  # update parameters
 
         # logging
+        epoch_embedding_loss.update(embedding_loss.item(),len(sample_ids))
         batch_loss = loss.item()
         epoch_loss.update(batch_loss, len(sample_ids))
 
@@ -324,6 +338,13 @@ def train_on_model(model, criterion, optimizer, batch_data, epoch, clip_grad_max
         # manual release memory, todo: really effect?
         del contents, question_ans, sample_labels, sample_ids
         del pred_labels, loss
+
+        if i%1000==0:
+            tensorboard_writer.add_scalar("train/embedding_loss",epoch_embedding_loss.avg,train_epoch)
+            tensorboard_writer.add_scalar("train/avg_loss", epoch_loss.avg, train_epoch)
+            tensorboard_writer.add_scalar("train/problem_acc", epoch_problem_acc.avg, train_epoch)
+            show_parameter_norm(model,tensorboard_writer,train_epoch)
+            train_epoch += 1
 
         #do test
         if i % 200 == 0:
@@ -361,6 +382,7 @@ def train_on_model(model, criterion, optimizer, batch_data, epoch, clip_grad_max
                     logger.info("=============================  saving model weight, saving info=%s ===================================" % epoch_info)
                     best_valid_acc = val_avg_problem_acc
                 val_epoch+=1
+
     logger.info('===== epoch=%d, batch_count=%d, epoch_average_loss=%.5f, avg_problem_acc=%.4f ====' % (
     epoch, batch_cnt, epoch_loss.avg, epoch_problem_acc.avg))
 
@@ -412,6 +434,13 @@ def compute_problems_accuracy_5c(pred_labels, real_labels, sample_ids):
     else:
         logging.info("check problem groups failed")
         return 0
+
+
+def show_parameter_norm(model,tensorboard_writer,epoch):
+    for name,para in model.named_parameters():
+        para_norm=(((para**2).sum())**0.5).item()
+        logger.info(name+"=====================%.4f"%para_norm)
+        tensorboard_writer.add_scalar("debug/%s"%name,para_norm,epoch)
 
 
 class AverageMeter(object):

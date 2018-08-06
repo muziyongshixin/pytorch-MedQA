@@ -9,11 +9,27 @@ from utils.functions import answer_search, multi_scale_ptr
 from IPython import embed
 from utils.functions import masked_softmax, compute_mask, masked_flip
 
-#和v3的区别是加入了qa的self attention feature
-class SeaReader_v4(torch.nn.Module):
+# 和v3版本的主要区别就是将question的context输出cat到Rnq的后面，和content公用同一个reasoning layer
+class SeaReader_v5(torch.nn.Module):
+    """
+    match-lstm+ model for machine comprehension
+    Args:
+        - global_config: model_config with types dictionary
+
+    Inputs:
+        context: (batch, seq_len)
+        question: (batch, seq_len)
+        context_char: (batch, seq_len, word_len)
+        question_char: (batch, seq_len, word_len)
+
+    Outputs:
+        ans_range_prop: (batch, 2, context_len)
+        ans_range: (batch, 2)
+        vis_alpha: to show on visdom
+    """
 
     def __init__(self, dataset_h5_path, device):
-        super(SeaReader_v4, self).__init__()
+        super(SeaReader_v5, self).__init__()
 
         self.device = device
         # set config
@@ -34,52 +50,37 @@ class SeaReader_v4(torch.nn.Module):
 
         gate_choose = "FC"
 
-        self.use_content_nums = 5
+        self.use_content_nums = 10
         self.hidden_size = hidden_size
-
-        R=1000
 
         # construct model
         self.fixed_embedding = Word2VecEmbedding(dataset_h5_path=dataset_h5_path, trainable=False)
 
         self.delta_embedding = delta_Embedding(n_embeddings=vocabulary_size, len_embedding=word_embedding_size,
                                                init_uniform=0.1, trainable=True)
+
         self.context_layer = MyLSTM(mode=hidden_mode,
                                     input_size=word_embedding_size,
                                     hidden_size=hidden_size,
                                     num_layers=encoder_word_layers,
                                     bidirectional=encoder_bidirection,
                                     dropout_p=dropout_p)
+
         self.reasoning_gating_layer = My_gate_layer(hidden_size * 2, gate_choose,dropout_p=0.2)
 
         self.decision_gating_layer = Noise_gate(hidden_size * 4, gate_choose,dropout_p=0.2)
 
-        self.content_reasoning_layer = MyLSTM(mode=hidden_mode,
+        self.reasoning_layer = MyLSTM(mode=hidden_mode,
                                               input_size=hidden_size * 4 + 2,
                                               hidden_size=hidden_size,
                                               num_layers=reasoning_layer_nums,
                                               bidirectional=reasoning_layer_bidirection,
                                               dropout_p=dropout_p)
 
-        self.question_reasoning_layer = MyLSTM(mode=hidden_mode,
-                                               input_size=hidden_size * 2 + 2,
-                                               hidden_size=hidden_size,
-                                               num_layers=reasoning_layer_nums,
-                                               bidirectional=reasoning_layer_bidirection,
-                                               dropout_p=dropout_p)
-
-        self.self_attention_layer = torch.nn.Sequential(
-            torch.nn.Linear(in_features=hidden_size * 2, out_features=150, bias=True),
-            torch.nn.Tanh(),
-            torch.nn.Linear(in_features=150, out_features=R, bias=True)
-        )
-
-        self.decision_layer = torch.nn.Linear(in_features=hidden_size * 8+R, out_features=1, bias=True)
+        self.decision_layer = torch.nn.Linear(in_features=hidden_size * 8, out_features=1, bias=True)
         torch.nn.init.xavier_uniform_(self.decision_layer.weight)
 
-
-
-    def forward(self, contents, question_ans, logics, questions, answers):
+    def forward(self, contents, question_ans, logics, contents_char=None, question_ans_char=None):
         # contents size(16,10,200)
         # question_ans size(16,100)
         batch_size = question_ans.size()[0]
@@ -169,12 +170,10 @@ class SeaReader_v4(torch.nn.Module):
             RmD.append(RmD_i)
 
         RnQ = torch.stack(RnQ, dim=1)  # size 16,n,100,256
-        viewed_RnQ = RnQ.view(batch_size * self.use_content_nums, max_question_len,
-                              self.hidden_size * 2)  # size 16*n,100,256
+        viewed_RnQ = RnQ.view(batch_size * self.use_content_nums, max_question_len,self.hidden_size * 2)  # size 16*n,100,256
 
         RmD = torch.stack(RmD, dim=1)  # size 16,n,200,256
-        viewed_RmD = RmD.view(batch_size * self.use_content_nums, max_content_len,
-                              self.hidden_size * 4)  # size 16*n,200,512
+        viewed_RmD = RmD.view(batch_size * self.use_content_nums, max_content_len,self.hidden_size * 4)  # size 16*n,200,512
 
         viewed_matching_feature_col = torch.stack(matching_feature_col, dim=1).view(batch_size * self.use_content_nums,
                                                                                     max_question_len,
@@ -183,40 +182,36 @@ class SeaReader_v4(torch.nn.Module):
                                                                                     max_content_len,
                                                                                     2)  # size 16*n,200,2
 
-        viewed_RnQ = torch.cat([viewed_RnQ, viewed_matching_feature_col], dim=-1)  # size 16*n,100,258
+        repeat_question_encode=question_encode.repeat(self.use_content_nums,1,1) # size 16*n,100,256
+
+        viewed_RnQ = torch.cat([viewed_RnQ, repeat_question_encode,viewed_matching_feature_col], dim=-1)  # size 16*n,100,514
         viewed_RmD = torch.cat([viewed_RmD, viewed_matching_feature_row], dim=-1)  # size 16*n,200,514
 
-        viewed_RnQ_mask = compute_mask(viewed_RnQ.mean(dim=2), PreprocessData.padding_idx)  # size 16*n,100,258
+        viewed_RnQ_mask = compute_mask(viewed_RnQ.mean(dim=2), PreprocessData.padding_idx)  # size 16*n,100,514
         viewed_RmD_mask = compute_mask(viewed_RmD.mean(dim=2), PreprocessData.padding_idx)  # size 16*n,200,514
+
         viewed_reasoning_question_gating_val = reasoning_question_gating_val.repeat(self.use_content_nums, 1, 1)
 
         gated_cur_RnQ = self.compute_gated_value(viewed_RnQ, viewed_reasoning_question_gating_val)
         gated_cur_RmD = self.compute_gated_value(viewed_RmD, viewed_reasoning_content_gating_val)
 
         # 经过reasoning层
-        cur_RnQ_reasoning_out = self.question_reasoning_layer.forward(gated_cur_RnQ,viewed_RnQ_mask)  # size=(16*n,100,256)
-        cur_RmD_reasoning_out = self.content_reasoning_layer.forward(gated_cur_RmD,viewed_RmD_mask)  # size=(16*n,200,256)
+        cur_RnQ_reasoning_out = self.reasoning_layer.forward(gated_cur_RnQ, viewed_RnQ_mask)  # size=(16*n,100,256)
+        cur_RmD_reasoning_out = self.reasoning_layer.forward(gated_cur_RmD, viewed_RmD_mask)  # size=(16*n,200,256)
 
         # reasoning 层后的pooling 100降维
         RnQ_reasoning_out_max_pooling, _ = torch.max(cur_RnQ_reasoning_out, dim=1)  # size=(16*n,256)
         RmD_reasoning_out_max_pooling, _ = torch.max(cur_RmD_reasoning_out, dim=1)  # size(16*n,256)
-        viewed_reasoning_feature = torch.cat([RnQ_reasoning_out_max_pooling, RmD_reasoning_out_max_pooling],dim=1)  # size(16*n,512)
-        reasoning_feature = viewed_reasoning_feature.view(batch_size, self.use_content_nums,
-                                                          self.hidden_size * 4)  # size=(16,10,512)
+        viewed_reasoning_feature = torch.cat([RnQ_reasoning_out_max_pooling, RmD_reasoning_out_max_pooling], dim=1)  # size(16*n,512)
+
+        reasoning_feature = viewed_reasoning_feature.view(batch_size, self.use_content_nums, self.hidden_size * 4)  # size=(16,10,512)
         noise_gate_val = self.decision_gating_layer(reasoning_feature)  # size=(16,10,1)
         gated_reasoning_feature = self.compute_gated_value(reasoning_feature, noise_gate_val)  # size=(16,10,512)
 
         reasoning_out_max_feature, _ = torch.max(gated_reasoning_feature, dim=1)  # size=(16,512)
         reasoning_out_mean_feature = torch.mean(gated_reasoning_feature, dim=1)  # size=(16,512)
+
         decision_input = torch.cat([reasoning_out_max_feature, reasoning_out_mean_feature], dim=1)  # size(16,1024)
-
-        # self attention feature
-        qa_attention=self.self_attention_layer.forward(question_encode)# size=(16,100,50)
-        qa_attention=torch.nn.functional.softmax(qa_attention,dim=1) # size=(16,100,50)
-        qa_match=torch.bmm(question_encode.transpose(1,2),qa_attention) #size=(16,256,50)
-        qa_matching_feature=torch.sum(qa_match,dim=1) #size=(16,50)
-
-        decision_input=torch.cat([decision_input,qa_matching_feature],dim=1) # size(16,1024+500)
 
         decision_output = self.decision_layer.forward(decision_input)  # size=(16,1)
         logics = logics.resize_(logics.size()[0], 1)

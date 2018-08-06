@@ -9,11 +9,27 @@ from utils.functions import answer_search, multi_scale_ptr
 from IPython import embed
 from utils.functions import masked_softmax, compute_mask, masked_flip
 
-#和v3的区别是加入了qa的self attention feature
-class SeaReader_v4(torch.nn.Module):
+
+class SeaReader_v4_5(torch.nn.Module):
+    """
+    match-lstm+ model for machine comprehension
+    Args:
+        - global_config: model_config with types dictionary
+
+    Inputs:
+        context: (batch, seq_len)
+        question: (batch, seq_len)
+        context_char: (batch, seq_len, word_len)
+        question_char: (batch, seq_len, word_len)
+
+    Outputs:
+        ans_range_prop: (batch, 2, context_len)
+        ans_range: (batch, 2)
+        vis_alpha: to show on visdom
+    """
 
     def __init__(self, dataset_h5_path, device):
-        super(SeaReader_v4, self).__init__()
+        super(SeaReader_v4_5, self).__init__()
 
         self.device = device
         # set config
@@ -44,12 +60,16 @@ class SeaReader_v4(torch.nn.Module):
 
         self.delta_embedding = delta_Embedding(n_embeddings=vocabulary_size, len_embedding=word_embedding_size,
                                                init_uniform=0.1, trainable=True)
+
+        self.qa_matching_layer=qa_matching_layer(R)
+
         self.context_layer = MyLSTM(mode=hidden_mode,
                                     input_size=word_embedding_size,
                                     hidden_size=hidden_size,
                                     num_layers=encoder_word_layers,
                                     bidirectional=encoder_bidirection,
                                     dropout_p=dropout_p)
+
         self.reasoning_gating_layer = My_gate_layer(hidden_size * 2, gate_choose,dropout_p=0.2)
 
         self.decision_gating_layer = Noise_gate(hidden_size * 4, gate_choose,dropout_p=0.2)
@@ -68,16 +88,8 @@ class SeaReader_v4(torch.nn.Module):
                                                bidirectional=reasoning_layer_bidirection,
                                                dropout_p=dropout_p)
 
-        self.self_attention_layer = torch.nn.Sequential(
-            torch.nn.Linear(in_features=hidden_size * 2, out_features=150, bias=True),
-            torch.nn.Tanh(),
-            torch.nn.Linear(in_features=150, out_features=R, bias=True)
-        )
-
         self.decision_layer = torch.nn.Linear(in_features=hidden_size * 8+R, out_features=1, bias=True)
         torch.nn.init.xavier_uniform_(self.decision_layer.weight)
-
-
 
     def forward(self, contents, question_ans, logics, questions, answers):
         # contents size(16,10,200)
@@ -86,6 +98,13 @@ class SeaReader_v4(torch.nn.Module):
         max_content_len = contents.size()[2]
         max_question_len = question_ans.size()[1]
         contents_num = contents.size()[1]
+
+        # no content features
+        q_vec,q_mask=self.fixed_embedding.forward(questions)
+        q_vec+=self.delta_embedding.forward(questions)
+        a_vec,a_mask=self.fixed_embedding.forward(answers)
+        a_vec+=self.delta_embedding.forward(answers)
+        qa_matching_feature=self.qa_matching_layer(q_vec,q_mask,a_vec,a_mask) #size=(batch,R)
 
         # word-level embedding: (seq_len, batch, embedding_size)
         question_vec, question_mask = self.fixed_embedding.forward(question_ans)  # size=(batch, 100, 200)
@@ -194,13 +213,17 @@ class SeaReader_v4(torch.nn.Module):
         gated_cur_RmD = self.compute_gated_value(viewed_RmD, viewed_reasoning_content_gating_val)
 
         # 经过reasoning层
-        cur_RnQ_reasoning_out = self.question_reasoning_layer.forward(gated_cur_RnQ,viewed_RnQ_mask)  # size=(16*n,100,256)
-        cur_RmD_reasoning_out = self.content_reasoning_layer.forward(gated_cur_RmD,viewed_RmD_mask)  # size=(16*n,200,256)
+        cur_RnQ_reasoning_out = self.question_reasoning_layer.forward(gated_cur_RnQ,
+                                                                      viewed_RnQ_mask)  # size=(16*n,100,256)
+        cur_RmD_reasoning_out = self.content_reasoning_layer.forward(gated_cur_RmD,
+                                                                     viewed_RmD_mask)  # size=(16*n,200,256)
 
         # reasoning 层后的pooling 100降维
         RnQ_reasoning_out_max_pooling, _ = torch.max(cur_RnQ_reasoning_out, dim=1)  # size=(16*n,256)
         RmD_reasoning_out_max_pooling, _ = torch.max(cur_RmD_reasoning_out, dim=1)  # size(16*n,256)
-        viewed_reasoning_feature = torch.cat([RnQ_reasoning_out_max_pooling, RmD_reasoning_out_max_pooling],dim=1)  # size(16*n,512)
+        viewed_reasoning_feature = torch.cat([RnQ_reasoning_out_max_pooling, RmD_reasoning_out_max_pooling],
+                                             dim=1)  # size(16*n,512)
+
         reasoning_feature = viewed_reasoning_feature.view(batch_size, self.use_content_nums,
                                                           self.hidden_size * 4)  # size=(16,10,512)
         noise_gate_val = self.decision_gating_layer(reasoning_feature)  # size=(16,10,1)
@@ -208,13 +231,8 @@ class SeaReader_v4(torch.nn.Module):
 
         reasoning_out_max_feature, _ = torch.max(gated_reasoning_feature, dim=1)  # size=(16,512)
         reasoning_out_mean_feature = torch.mean(gated_reasoning_feature, dim=1)  # size=(16,512)
-        decision_input = torch.cat([reasoning_out_max_feature, reasoning_out_mean_feature], dim=1)  # size(16,1024)
 
-        # self attention feature
-        qa_attention=self.self_attention_layer.forward(question_encode)# size=(16,100,50)
-        qa_attention=torch.nn.functional.softmax(qa_attention,dim=1) # size=(16,100,50)
-        qa_match=torch.bmm(question_encode.transpose(1,2),qa_attention) #size=(16,256,50)
-        qa_matching_feature=torch.sum(qa_match,dim=1) #size=(16,50)
+        decision_input = torch.cat([reasoning_out_max_feature, reasoning_out_mean_feature], dim=1)  # size(16,1024)
 
         decision_input=torch.cat([decision_input,qa_matching_feature],dim=1) # size(16,1024+500)
 

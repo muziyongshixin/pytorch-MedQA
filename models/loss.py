@@ -35,6 +35,18 @@ class delta_embedding_Loss(torch.nn.modules.loss._Loss):
         loss=loss*self.c
         return loss
 
+class delta_embedding_sum_Loss(torch.nn.modules.loss._Loss):
+    def __init__(self,c=1):
+        super(delta_embedding_sum_Loss, self).__init__()
+        self.c=c
+    def forward(self,weight_change):
+        loss=weight_change**2 #size=(355921,200)
+        loss=torch.sum(loss,1)#size=(355921,1)
+        loss += (1e-12)
+        loss=loss**0.5#size=(355921,1)
+        loss=torch.sum(loss)#size=(1)
+        loss=loss*self.c
+        return loss
 # return max(false_score-true_score+delta , 0)
 class SVM_loss(torch.nn.modules.loss._Loss):
     def __init__(self,delta=0.5,mean=True):

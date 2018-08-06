@@ -6,8 +6,10 @@ from .SeaReader import SeaReader
 from .SimpleSeaReader import SimpleSeaReader
 from .TestModel import TestModel
 from .cnn_model import cnn_model
-from .SeaReader_5c import SeaReader_5c
 from .SeaReader_v2 import SeaReader_v2
 from .SeaReader_v3 import SeaReader_v3
 from .SeaReader_v4 import SeaReader_v4
+from .SeaReader_v4_5 import SeaReader_v4_5
+from .SeaReader_v5 import SeaReader_v5
 from .No_content_model import No_content_model
+from .SeaReader_attention import SeaReader_attention

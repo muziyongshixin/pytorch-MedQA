@@ -9,11 +9,11 @@ data:
   ignore_max_question_len: 60
   ignore_max_ans_len: 12
 
-  embedding_path: data/corpus_0711_366k_200.txt   # data/glove.840B.300d.zip
+  embedding_path: data/corpus_0711_366k_200.txt
   vocabulary_path: data/vocabulary
   vacabulary_nums: 365552
 
-  model_path:  checkpoint/panda2_2018-07-28-17_07_30_continue_panda2_2018-07-26-17_35_57,using31wdata100contentlen_model_weight.pt
+  model_path:  checkpoint/panda3_2018-07-30-11_28_15_continue_panda2_2018-07-28-17_07_30_testdropoutgate0.2,lr-3_model_weight.pt
   model_weight_dir: checkpoint/
   checkpoint_path: checkpoint/
 
@@ -23,7 +23,7 @@ model:
 
 global:
   random_seed: 123
-  model: SeaReader_v4   #SeaReader
+  model: SeaReader_v4_5   #SeaReader
    #match-lstm+ # 'match-lstm', 'match-lstm+', 'r-net' or 'base'. Note that 'base' model is customized by base_model.yaml
 
 train:
@@ -41,11 +41,10 @@ train:
   clip_grad_norm: 5
 
 test:
-  model: SeaReader
-  test_batch_size: 200
+  model: SeaReader_v3
+  test_batch_size: 100
   enable_cuda: True
-  keep_embedding: True # 是否保留weight里的embedding
-  dataset_h5: data/v6_31w_with297k_embedding_maxcontentlen200_withlogic.h5  #保存预处理的数据，embedding，w2id等
-  model_path: checkpoint/panda2_2018-07-17-13_58_53_continue_pkumi2_v6data_lr=-4_model_weight.pt
+  dataset_h5: data/v6fordebug_600_with366k_embedding_qas100_cont100_q60_a12_withlogicAndCategory.h5  #保存预处理的数据，embedding，w2id等
+  model_path: checkpoint/panda2_2018-07-28-17_07_30_continue_panda2_2018-07-26-17_35_57,using31wdata100contentlen_model_weight.pt
   output_file_path: 'result/'
 

@@ -59,42 +59,53 @@ def test_5c(config_path, experiment_info):
 
     logger.info('constructing model...')
     model_choose = global_config['test']['model']
-    logger.info("model choose is:   " + model_choose)
     dataset_h5_path = global_config['test']['dataset_h5']
+    logger.info('Using dataset path is : %s' % dataset_h5_path)
+    logger.info('### Using model is: %s ###' % model_choose)
     if model_choose == 'SeaReader':
         model = SeaReader(dataset_h5_path, device)
-    elif model_choose == 'SeaReader_5c':
-        model = SeaReader_5c(dataset_h5_path, device)
     elif model_choose == 'SimpleSeaReader':
         model = SimpleSeaReader(dataset_h5_path, device)
+    elif model_choose == 'TestModel':
+        model = TestModel(dataset_h5_path, device)
+    elif model_choose == 'cnn_model':
+        model = cnn_model(dataset_h5_path, device)
+    elif model_choose == 'SeaReader_5c':
+        model = SeaReader_5c(dataset_h5_path, device)
+    elif model_choose == 'SeaReader_v2':
+        model = SeaReader_v2(dataset_h5_path, device)
+    elif model_choose == 'SeaReader_v3':
+        model = SeaReader_v3(dataset_h5_path, device)
+    elif model_choose == 'SeaReader_v4':
+        model = SeaReader_v4(dataset_h5_path, device)
+    elif model_choose == 'No_content_model':
+        model = No_content_model(dataset_h5_path)
     else:
-        raise ValueError('model "%s" in config file not recoginized' % model_choose)
-
+        raise ValueError('model "%s" in config file not recognized' % model_choose)
     print_network(model)
+
     logger.info('dataParallel using %d GPU.....' % torch.cuda.device_count())
-    model = torch.nn.DataParallel(model)
     model = model.to(device)
     model.eval()  # let training = False, make sure right dropout
 
-    global init_embedding_weight
-    init_embedding_weight = model.state_dict()['module.embedding.embedding_layer.weight']
+
+    # load model weight
+    logger.info('loading model weight...')
+    model_weight_path = global_config['test']['model_path']
+    assert os.path.exists(model_weight_path), "not found model weight file on '%s'" % model_weight_path
+    if enable_cuda:
+        weight = torch.load(model_weight_path, map_location=lambda storage, loc: storage.cuda())
+    else:
+        weight = torch.load(model_weight_path, map_location=lambda storage, loc: storage)
+    model.load_state_dict(weight, strict=False)
+
+
+
 
     # testing arguments
     logger.info('get test data loader ...')
     test_batch_size = global_config['test']['test_batch_size']
     batch_test_data = dataset.get_dataloader_test(test_batch_size, shuffle=False)
-
-    # load model weight
-    logger.info('loading model weight...')
-    model_weight_path = global_config['data']['model_path']
-    assert os.path.exists(model_weight_path), "not found model weight file on '%s'" % model_weight_path
-
-    weight = torch.load(model_weight_path, map_location=lambda storage, loc: storage)
-    if enable_cuda:
-        weight = torch.load(model_weight_path, map_location=lambda storage, loc: storage.cuda())
-    if not global_config['test']['keep_embedding']:
-        del weight['module.embedding.embedding_layer.weight']  # 删除掉embedding层的参数 ，避免尺寸不对的问题
-    model.load_state_dict(weight, strict=False)
 
     # forward
     logger.info('evaluate forwarding...')
@@ -114,18 +125,17 @@ def predict_on_model(model, batch_data, device, out_path):
     start_time = time.time()
     for bnum, batch in enumerate(batch_data):
         # batch data
-        contents, question_ans, sample_labels, sample_ids, sample_categorys, sample_logics = batch
-        if len(sample_ids) % (15) != 0:
-            logger.info("batch num is incorrect, ignore this batch")
-            continue
+        contents, question_ans, question, ans, sample_ids, sample_labels, sample_categorys, sample_logics = batch
         contents = contents.to(device)
         question_ans = question_ans.to(device)
+        question = question.to(device)
+        ans = ans.to(device)
         sample_labels = sample_labels.to(device)
         sample_labels = torch.argmax(sample_labels.resize_(int(sample_labels.size()[0] / 5), 5), dim=1)
         sample_logics = sample_logics.to(device)
         # contents:batch_size*10*200,  question_ans:batch_size*100  ,sample_labels=batchsize
         # forward
-        pred_labels = model.forward(contents, question_ans, sample_logics)  # pred_labels size=(batch,2)
+        pred_labels = model.forward(contents, question_ans, sample_logics,question,ans)  # pred_labels size=(batch,2)
 
         problem_acc = compute_problems_accuracy_5c(pred_labels, sample_labels, sample_ids)
 
@@ -136,7 +146,7 @@ def predict_on_model(model, batch_data, device, out_path):
         save_test_result_to_csv(sample_ids, pred_labels, sample_labels, sample_categorys, sample_logics, out_path)
 
     test_time = time.time() - start_time
-    logger.info('===== test completed, avg_problem_acc=%.4f, eval_time=%.1f====' % (epoch_problem_acc.avg, test_time))
+    logger.info('===== test completed, avg_problem_acc=%.4f, test_time=%.1f  ======' % (epoch_problem_acc.avg, test_time))
 
     return 0
 

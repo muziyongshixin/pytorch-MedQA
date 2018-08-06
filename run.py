@@ -8,6 +8,7 @@ __author__ = 'han'
 import logging
 import argparse
 from test import test
+from test_5c import test_5c
 from debug import debug
 from train import train
 from train_5c import train_5c
@@ -53,6 +54,8 @@ elif args.mode == 'test':
     test(args.config_path, experiment_info)
 elif args.mode == 'train_5c':
     train_5c(args.config_path,experiment_info,training_info)
+elif args.mode == 'test_5c':
+    test_5c(args.config_path,experiment_info)
 elif args.mode =='train_no_content':
     train_no_content(args.config_path,experiment_info,training_info)
 else:

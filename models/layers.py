@@ -295,8 +295,7 @@ class qa_matching_layer(torch.nn.Module):
         dropout_p=0.3
         ws_factor=1
         self.R=R
-        embedding_trainable=False
-        vocabulary_size=365553
+
 
         # self.fixed_embedding=Word2VecEmbedding(dataset_h5_path=dataset_h5_path, trainable=embedding_trainable)
         # self.delta_embedding = delta_Embedding(n_embeddings=vocabulary_size, len_embedding=word_embedding_size,

@@ -2,14 +2,21 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="379b3c50-c63d-4abf-8907-779f9aeead13" name="Default" comment="">
-      <change afterPath="$PROJECT_DIR$/models/SeaReader_v4.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/SeaReader_attention.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/SeaReader_v4_5.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/SeaReader_v5.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/config/global_config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config/global_config.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/SeaReader_5c.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/models/SeaReader_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/SeaReader_v3.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/SeaReader_v4.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/SeaReader_v4.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/SimpleSeaReader.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/SimpleSeaReader.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/models/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/models/layers.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/layers.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/loss.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/loss.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/run.py" beforeDir="false" afterPath="$PROJECT_DIR$/run.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_5c.py" beforeDir="false" afterPath="$PROJECT_DIR$/test_5c.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/train_5c.py" beforeDir="false" afterPath="$PROJECT_DIR$/train_5c.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/eval_5c.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/eval_5c.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -26,37 +33,43 @@
     <session id="-460912892">
       <usages-collector id="statistics.lifecycle.project">
         <counts>
-          <entry key="project.closed" value="2" />
+          <entry key="project.closed" value="8" />
           <entry key="project.open.time.13" value="1" />
-          <entry key="project.open.time.25" value="1" />
+          <entry key="project.open.time.15" value="1" />
+          <entry key="project.open.time.16" value="1" />
+          <entry key="project.open.time.17" value="1" />
+          <entry key="project.open.time.18" value="1" />
+          <entry key="project.open.time.25" value="2" />
           <entry key="project.open.time.31" value="1" />
-          <entry key="project.opened" value="3" />
+          <entry key="project.opened" value="8" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.open">
         <counts>
-          <entry key="log" value="3" />
-          <entry key="py" value="8" />
-          <entry key="yaml" value="2" />
+          <entry key="log" value="10" />
+          <entry key="py" value="55" />
+          <entry key="yaml" value="6" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.open">
         <counts>
-          <entry key="ANSI Aware" value="3" />
-          <entry key="Python" value="8" />
-          <entry key="YAML" value="2" />
+          <entry key="ANSI Aware" value="10" />
+          <entry key="Python" value="55" />
+          <entry key="YAML" value="6" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
-          <entry key="py" value="655" />
-          <entry key="yaml" value="22" />
+          <entry key="dummy" value="3" />
+          <entry key="py" value="3983" />
+          <entry key="yaml" value="121" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.edit">
         <counts>
-          <entry key="Python" value="655" />
-          <entry key="YAML" value="22" />
+          <entry key="PLAIN_TEXT" value="3" />
+          <entry key="Python" value="3983" />
+          <entry key="YAML" value="121" />
         </counts>
       </usages-collector>
     </session>
@@ -66,14 +79,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/models/SeaReader_v3.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="267">
-              <caret line="21" column="33" selection-end-line="329" />
-              <folding>
-                <element signature="e#5044#5047#0" />
-                <element signature="e#12295#12319#0" />
-                <element signature="e#16443#16576#1" />
-                <element signature="e#16585#16618#0" />
-              </folding>
+            <state relative-caret-position="336">
+              <caret line="20" column="34" selection-start-line="20" selection-start-column="34" selection-end-line="20" selection-end-column="34" />
             </state>
           </provider>
         </entry>
@@ -81,26 +88,14 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/train_5c.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="357">
-              <caret line="125" lean-forward="true" selection-start-line="125" selection-end-line="125" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/utils/eval_5c.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="441">
-              <caret line="43" column="119" selection-start-line="43" selection-start-column="119" selection-end-line="43" selection-end-column="119" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/config/global_config.yaml">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="399">
-              <caret line="19" column="7" selection-start-line="19" selection-start-column="7" selection-end-line="19" selection-end-column="7" />
+            <state relative-caret-position="325">
+              <caret line="218" column="48" selection-start-line="218" selection-start-column="48" selection-end-line="218" selection-end-column="48" />
+              <folding>
+                <element signature="e#864#1745#0" />
+                <element signature="e#1831#2005#0" />
+                <element signature="e#2081#2414#0" />
+                <marker date="1533366386792" expanded="true" signature="20546:20781" ph="..." />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -108,28 +103,35 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/models/SeaReader_v4.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-504">
-              <caret line="13" selection-start-line="13" selection-end-line="13" />
-              <folding>
-                <element signature="e#5253#5256#0" />
-                <element signature="e#13438#13462#0" />
-                <element signature="e#17711#17844#1" />
-                <element signature="e#17853#17886#0" />
-              </folding>
+            <state relative-caret-position="84">
+              <caret line="36" column="33" selection-start-line="36" selection-start-column="33" selection-end-line="36" selection-end-column="33" />
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/models/layers.py">
+        <entry file="file://$PROJECT_DIR$/models/SeaReader_v4_5.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-25">
-              <caret line="323" column="81" selection-start-line="323" selection-start-column="81" selection-end-line="323" selection-end-column="81" />
-              <folding>
-                <element signature="e#3627#5569#0" />
-                <element signature="e#4240#4343#1" />
-                <element signature="e#5607#12249#0" />
-              </folding>
+            <state relative-caret-position="126">
+              <caret line="115" column="47" selection-start-line="115" selection-start-column="47" selection-end-line="115" selection-end-column="47" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/models/SeaReader_v5.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="-4113">
+              <caret line="50" column="26" selection-start-line="50" selection-start-column="26" selection-end-line="50" selection-end-column="26" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/config/global_config.yaml">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="210">
+              <caret line="25" column="23" selection-start-line="25" selection-start-column="23" selection-end-line="25" selection-end-column="23" />
             </state>
           </provider>
         </entry>
@@ -145,7 +147,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>load_and_train_model_test_es</find>
       <find>get_bi_lstm</find>
       <find>self.run_args.hidden_size</find>
       <find>Matching_matrix</find>
@@ -175,6 +176,7 @@
       <find>crit</find>
       <find>my_softmax</find>
       <find>question_wids</find>
+      <find>qa_matching_layer</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -183,17 +185,12 @@
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/data/MedQA/ES抽取结果_陈玉莲/临床执业助理医生-模拟题-parsed-all/one_sample.json" />
-        <option value="&lt;2ac3202c-ac91-4c57-82a2-7a82b695c6df&gt;/m/liyz/MedQA-workspace/rawdata/integrate.py" />
-        <option value="$PROJECT_DIR$/utils/json_data_transformer/data_check.py" />
-        <option value="&lt;2ac3202c-ac91-4c57-82a2-7a82b695c6df&gt;/m/liyz/MedQA-workspace/v1.0/data/MedQA/README" />
         <option value="$PROJECT_DIR$/data/MedQA/data_check.py" />
         <option value="&lt;2ac3202c-ac91-4c57-82a2-7a82b695c6df&gt;/m/liyz/MedQA-workspace/v1.0/data/h5file_README" />
         <option value="$PROJECT_DIR$/utils/load_config.py" />
         <option value="$PROJECT_DIR$/data/MedQA/full_data_one_example" />
         <option value="$PROJECT_DIR$/utils/json_data_transformer/full_data_integrate.py" />
         <option value="$PROJECT_DIR$/test_input.py" />
-        <option value="$PROJECT_DIR$/models/SimpleSeaReader.py" />
         <option value="$PROJECT_DIR$/dataset/preprocess_data.py.bk" />
         <option value="$PROJECT_DIR$/utils/functions.py" />
         <option value="&lt;2ac3202c-ac91-4c57-82a2-7a82b695c6df&gt;/m/liyz/MedQA-workspace/rawdata/full_data/v5/README" />
@@ -204,13 +201,11 @@
         <option value="$PROJECT_DIR$/utils/result_analyse.py" />
         <option value="$PROJECT_DIR$/test_5v.py" />
         <option value="$PROJECT_DIR$/test.py" />
-        <option value="$PROJECT_DIR$/test_5c.py" />
         <option value="$PROJECT_DIR$/DL_Thread.py" />
         <option value="$PROJECT_DIR$/models/SeaReader_5c.bk.py" />
         <option value="$PROJECT_DIR$/main_Thread.py" />
         <option value="$PROJECT_DIR$/models/SeaReader_5c.new.py" />
         <option value="$PROJECT_DIR$/utils/json_data_transformer/integrate.py" />
-        <option value="$PROJECT_DIR$/models/SeaReader_5c.py" />
         <option value="$PROJECT_DIR$/models/SeaReader.py" />
         <option value="$PROJECT_DIR$/train.py" />
         <option value="$PROJECT_DIR$/debug.py" />
@@ -218,22 +213,29 @@
         <option value="$PROJECT_DIR$/models/SeaReader_v2.py" />
         <option value="$PROJECT_DIR$/models/model_v1.py" />
         <option value="$PROJECT_DIR$/models/infe_model.py" />
-        <option value="$PROJECT_DIR$/models/loss.py" />
         <option value="&lt;2ac3202c-ac91-4c57-82a2-7a82b695c6df&gt;/m/tiangy/medqa/pytorch-MedQA-master/dataset/preprocess_data.py" />
         <option value="$PROJECT_DIR$/config/logging_config.yaml" />
         <option value="$PROJECT_DIR$/dataset/preprocess_data.py" />
         <option value="$PROJECT_DIR$/utils/eval_no_content.py" />
-        <option value="$PROJECT_DIR$/run.py" />
         <option value="$PROJECT_DIR$/dataset/MedQA_dataset.py" />
         <option value="$PROJECT_DIR$/train_no_content.py" />
         <option value="$PROJECT_DIR$/models/No_content_model.py" />
-        <option value="$PROJECT_DIR$/models/SeaReader_v3.py" />
-        <option value="$PROJECT_DIR$/models/layers.py" />
         <option value="$PROJECT_DIR$/utils/eval_5c.py" />
-        <option value="$PROJECT_DIR$/models/__init__.py" />
-        <option value="$PROJECT_DIR$/train_5c.py" />
+        <option value="$PROJECT_DIR$/run.py" />
+        <option value="$PROJECT_DIR$/test_5c.py" />
+        <option value="$PROJECT_DIR$/models/SeaReader_attention.py" />
+        <option value="$PROJECT_DIR$/models/SimpleSeaReader.py" />
+        <option value="$PROJECT_DIR$/models/loss.py" />
+        <option value="$PROJECT_DIR$/models/SeaReader_5c.py" />
+        <option value="$PROJECT_DIR$/models/SeaReader_v5.py" />
+        <option value="$PROJECT_DIR$/models/SeaReader_v3.py" />
         <option value="$PROJECT_DIR$/models/SeaReader_v4.py" />
+        <option value="$PROJECT_DIR$/models/SeaReader_v4.5.py" />
+        <option value="$PROJECT_DIR$/models/layers.py" />
+        <option value="$PROJECT_DIR$/models/__init__.py" />
         <option value="$PROJECT_DIR$/config/global_config.yaml" />
+        <option value="$PROJECT_DIR$/train_5c.py" />
+        <option value="$PROJECT_DIR$/models/SeaReader_v4_5.py" />
       </list>
     </option>
   </component>
@@ -244,17 +246,16 @@
     <sorting>DEFINITION_ORDER</sorting>
   </component>
   <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="-318" />
-    <option name="y" value="-1110" />
-    <option name="width" value="1939" />
-    <option name="height" value="1050" />
+    <option name="x" value="87" />
+    <option name="y" value="-1108" />
+    <option name="width" value="1920" />
+    <option name="height" value="1015" />
   </component>
   <component name="ProjectView">
     <navigator proportions="" version="1">
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -302,6 +303,7 @@
           <select />
         </subPane>
       </pane>
+      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -309,22 +311,22 @@
     <property name="WebServerToolWindowPanel.toolwindow.highlight.mappings" value="true" />
     <property name="WebServerToolWindowPanel.toolwindow.highlight.symlinks" value="true" />
     <property name="WebServerToolWindowPanel.toolwindow.show.date" value="true" />
-    <property name="WebServerToolWindowPanel.toolwindow.show.permissions" value="false" />
+    <property name="WebServerToolWindowPanel.toolwindow.show.permissions" value="true" />
     <property name="WebServerToolWindowPanel.toolwindow.show.size" value="true" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
-    <property name="settings.editor.selected.configurable" value="editor.preferences.fonts.default" />
+    <property name="settings.editor.selected.configurable" value="reference.settingsdialog.IDE.editor.colors" />
   </component>
   <component name="RecentsManager">
-    <key name="CopyFile.RECENT_KEYS">
-      <recent name="E:\pyCharm WorkSpace\pytorch-MedQA\dataset" />
-      <recent name="E:\pyCharm WorkSpace\pytorch-MedQA\models" />
-      <recent name="E:\pyCharm WorkSpace\pytorch-MedQA\data" />
-    </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="E:\pyCharm WorkSpace\pytorch-MedQA\data\MedQA" />
       <recent name="E:\pyCharm WorkSpace\pytorch-MedQA\data\MedQA\ES抽取结果_陈玉莲" />
       <recent name="E:\pyCharm WorkSpace\pytorch-MedQA\utils\json_data_transformer" />
       <recent name="E:\pyCharm WorkSpace\pytorch-MedQA\utils" />
+    </key>
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="E:\pyCharm WorkSpace\pytorch-MedQA\models" />
+      <recent name="E:\pyCharm WorkSpace\pytorch-MedQA\dataset" />
+      <recent name="E:\pyCharm WorkSpace\pytorch-MedQA\data" />
     </key>
   </component>
   <component name="RunDashboard">
@@ -434,8 +436,32 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="-7" y="-1087" width="1550" height="848" extended-state="6" />
-    <editor active="true" />
     <layout>
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.16823056" />
+      <window_info id="Structure" order="1" weight="0.22788204" />
+      <window_info id="Favorites" order="2" side_tool="true" />
+      <window_info anchor="bottom" id="Message" order="0" />
+      <window_info anchor="bottom" id="Find" order="1" />
+      <window_info anchor="bottom" id="Run" order="2" sideWeight="0.63733906" weight="0.22834645" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
+      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
+      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
+      <window_info anchor="bottom" id="TODO" order="6" />
+      <window_info anchor="bottom" id="Event Log" order="7" sideWeight="0.347185" side_tool="true" weight="0.17202798" />
+      <window_info anchor="bottom" id="Version Control" order="8" />
+      <window_info anchor="bottom" id="Python Console" order="9" weight="0.3295838" />
+      <window_info anchor="bottom" id="Terminal" order="10" weight="0.3295838" />
+      <window_info anchor="bottom" id="Docker" order="11" show_stripe_button="false" />
+      <window_info anchor="bottom" id="File Transfer" order="12" sideWeight="0.652815" visible="true" weight="0.17202798" />
+      <window_info anchor="bottom" id="Database Changes" order="13" show_stripe_button="false" />
+      <window_info anchor="right" id="Commander" order="0" weight="0.4" />
+      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
+      <window_info anchor="right" x="278" y="84" width="972" height="617" id="Remote Host" order="3" type="WINDOWED" visible="true" weight="0.4041555" />
+      <window_info anchor="right" id="SciView" order="4" weight="0.3299356" />
+      <window_info anchor="right" id="Database" order="5" />
+    </layout>
+    <layout-to-restore>
       <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.15683647" />
       <window_info id="Structure" order="1" weight="0.15214477" />
       <window_info id="Favorites" order="2" side_tool="true" />
@@ -456,32 +482,7 @@
       <window_info anchor="right" id="Commander" order="0" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
-      <window_info active="true" anchor="right" x="760" y="-910" width="620" height="328" id="Remote Host" order="3" visible="true" weight="0.20107238" />
-      <window_info anchor="right" id="SciView" order="4" weight="0.3299356" />
-      <window_info anchor="right" id="Database" order="5" />
-    </layout>
-    <layout-to-restore>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.15683647" />
-      <window_info id="Structure" order="1" weight="0.15214477" />
-      <window_info id="Favorites" order="2" side_tool="true" />
-      <window_info anchor="bottom" id="Message" order="0" />
-      <window_info anchor="bottom" id="Find" order="1" />
-      <window_info anchor="bottom" id="Run" order="2" sideWeight="0.63733906" weight="0.22834645" />
-      <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
-      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
-      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
-      <window_info anchor="bottom" id="TODO" order="6" />
-      <window_info anchor="bottom" id="Event Log" order="7" sideWeight="0.347185" side_tool="true" visible="true" weight="0.17202798" />
-      <window_info anchor="bottom" id="Version Control" order="8" />
-      <window_info anchor="bottom" id="Python Console" order="9" weight="0.3295838" />
-      <window_info anchor="bottom" id="Terminal" order="10" weight="0.3295838" />
-      <window_info anchor="bottom" id="Docker" order="11" show_stripe_button="false" />
-      <window_info anchor="bottom" id="File Transfer" order="12" sideWeight="0.652815" visible="true" weight="0.17202798" />
-      <window_info anchor="bottom" id="Database Changes" order="13" show_stripe_button="false" />
-      <window_info anchor="right" id="Commander" order="0" weight="0.4" />
-      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
-      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
-      <window_info active="true" anchor="right" x="760" y="-910" width="620" height="328" id="Remote Host" order="3" visible="true" weight="0.36729223" />
+      <window_info active="true" anchor="right" x="760" y="-910" width="620" height="328" id="Remote Host" order="3" visible="true" weight="0.25536194" />
       <window_info anchor="right" id="SciView" order="4" weight="0.3299356" />
       <window_info anchor="right" id="Database" order="5" />
     </layout-to-restore>
@@ -504,90 +505,6 @@
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/test.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="5625">
-          <caret line="228" column="74" selection-start-line="228" selection-start-column="4" selection-end-line="228" selection-end-column="74" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/DL_Thread.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="475">
-          <caret line="19" column="82" selection-start-line="19" selection-start-column="12" selection-end-line="19" selection-end-column="85" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/test_5c.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="3950">
-          <caret line="161" column="64" selection-start-line="161" selection-start-column="64" selection-end-line="161" selection-end-column="64" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/models/SeaReader_5c.new.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="152">
-          <caret line="104" column="7" selection-start-line="104" selection-start-column="7" selection-end-line="104" selection-end-column="7" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://D:/software/anaconda/Lib/site-packages/torch/nn/utils/clip_grad.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="75">
-          <caret line="3" column="4" selection-start-line="3" selection-start-column="4" selection-end-line="3" selection-end-column="4" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://D:/software/anaconda/Lib/random.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="232">
-          <caret line="215" column="8" selection-start-line="215" selection-start-column="8" selection-end-line="215" selection-end-column="8" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$USER_HOME$/.PyCharm2017.3/system/python_stubs/-2083645195/torch/_C/__init__.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="116">
-          <caret line="4310" column="4" lean-forward="true" selection-start-line="4307" selection-start-column="8" selection-end-line="4310" selection-end-column="4" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/main_Thread.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="331">
-          <caret line="73" column="25" lean-forward="true" selection-start-line="73" selection-start-column="25" selection-end-line="73" selection-end-column="25" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/utils/json_data_transformer/integrate.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="4219">
-          <caret line="218" column="10" lean-forward="true" selection-start-line="218" selection-start-column="10" selection-end-line="218" selection-end-column="10" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://D:/software/anaconda/Lib/site-packages/torch/nn/modules/container.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="218">
-          <caret line="88" column="8" selection-start-line="88" selection-start-column="8" selection-end-line="88" selection-end-column="8" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://D:/software/anaconda/Lib/site-packages/tensorflow/python/framework/ops.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="47480">
-          <caret line="5273" column="6" selection-start-line="5273" selection-start-column="6" selection-end-line="5273" selection-end-column="6" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/models/SeaReader_5c.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="314">
-          <caret line="305" selection-start-line="305" selection-end-line="305" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://D:/software/anaconda/Lib/site-packages/tensorflow/python/ops/embedding_ops.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="306">
@@ -606,13 +523,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="331">
           <caret line="185" column="28" lean-forward="true" selection-start-line="185" selection-start-column="28" selection-end-line="185" selection-end-column="28" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/debug.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="3025">
-          <caret line="123" column="22" selection-start-line="123" selection-start-column="22" selection-end-line="123" selection-end-column="22" />
         </state>
       </provider>
     </entry>
@@ -672,13 +582,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://D:/software/anaconda/Lib/site-packages/torch/optim/adam.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="318">
-          <caret line="62" column="20" selection-start-line="62" selection-start-column="16" selection-end-line="62" selection-end-column="20" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/dataset/preprocess_data.bk.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="7500">
@@ -693,13 +596,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/models/loss.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1150">
-          <caret line="48" column="67" selection-start-line="48" selection-start-column="62" selection-end-line="48" selection-end-column="67" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/models/r_net.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="33">
@@ -711,16 +607,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="25">
           <caret line="54" column="39" selection-start-line="54" selection-start-column="39" selection-end-line="54" selection-end-column="39" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/models/infe_model.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="658">
-          <caret line="332" column="16" lean-forward="true" selection-start-line="332" selection-start-column="16" selection-end-line="332" selection-end-column="16" />
-          <folding>
-            <element signature="e#47#84#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -749,24 +635,10 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/dataset/MedQA_dataset.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="2163">
-          <caret line="112" column="11" selection-start-line="112" selection-start-column="11" selection-end-line="112" selection-end-column="11" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/train_no_content.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="3990">
           <caret line="193" column="70" lean-forward="true" selection-start-line="192" selection-start-column="3" selection-end-line="193" selection-end-column="70" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/run.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1155">
-          <caret line="56" column="67" selection-start-line="56" selection-start-column="67" selection-end-line="56" selection-end-column="67" />
         </state>
       </provider>
     </entry>
@@ -784,56 +656,10 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://D:/software/anaconda/Lib/site-packages/torch/nn/modules/module.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="2889">
-          <caret line="250" column="8" selection-start-line="250" selection-start-column="8" selection-end-line="250" selection-end-column="8" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://D:/software/anaconda/Lib/site-packages/torch/nn/modules/dropout.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="126">
           <caret line="19" column="6" selection-start-line="19" selection-start-column="6" selection-end-line="19" selection-end-column="6" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/models/SeaReader_v3.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="267">
-          <caret line="21" column="33" selection-end-line="329" />
-          <folding>
-            <element signature="e#5044#5047#0" />
-            <element signature="e#12295#12319#0" />
-            <element signature="e#16443#16576#1" />
-            <element signature="e#16585#16618#0" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/models/No_content_model.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="416">
-          <caret line="71" column="21" lean-forward="true" selection-start-line="4" selection-start-column="4" selection-end-line="71" selection-end-column="21" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/models/layers.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-25">
-          <caret line="323" column="81" selection-start-line="323" selection-start-column="81" selection-end-line="323" selection-end-column="81" />
-          <folding>
-            <element signature="e#3627#5569#0" />
-            <element signature="e#4240#4343#1" />
-            <element signature="e#5607#12249#0" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/utils/eval_5c.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="441">
-          <caret line="43" column="119" selection-start-line="43" selection-start-column="119" selection-end-line="43" selection-end-column="119" />
         </state>
       </provider>
     </entry>
@@ -844,37 +670,185 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/dataset/MedQA_dataset.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-79">
+          <caret line="80" column="8" selection-start-line="80" selection-start-column="8" selection-end-line="80" selection-end-column="8" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/utils/eval_5c.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="609">
+          <caret line="33" column="20" selection-start-line="29" selection-start-column="8" selection-end-line="44" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/run.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1176">
+          <caret line="57" column="45" selection-start-line="57" selection-start-column="45" selection-end-line="57" selection-end-column="45" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/models/No_content_model.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-700">
+          <caret line="12" column="17" selection-start-line="12" selection-start-column="8" selection-end-line="12" selection-end-column="17" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/helper_run/analysis_ans.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test_5c.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="3339">
+          <caret line="162" column="38" selection-start-line="161" selection-start-column="8" selection-end-line="163" selection-end-column="41" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/temp.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test_input.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/models/SeaReader_attention.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="125">
+          <caret line="221" column="58" lean-forward="true" selection-start-line="221" selection-start-column="58" selection-end-line="221" selection-end-column="58" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/models/infe_model.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="479">
+          <caret line="318" column="57" lean-forward="true" selection-start-line="318" selection-start-column="57" selection-end-line="318" selection-end-column="57" />
+          <folding>
+            <element signature="e#47#84#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/DL_Thread.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/models/SimpleSeaReader.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="623">
+          <caret line="54" column="33" selection-start-line="54" selection-start-column="33" selection-end-line="54" selection-end-column="33" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/debug.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="500">
+          <caret line="123" column="22" selection-start-line="123" selection-start-column="22" selection-end-line="123" selection-end-column="22" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/models/loss.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="248">
+          <caret line="25" column="8" selection-start-line="25" selection-start-column="8" selection-end-line="25" selection-end-column="8" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/models/base_model.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="180">
+          <caret line="81" column="17" selection-start-line="81" selection-start-column="17" selection-end-line="81" selection-end-column="17" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://D:/software/anaconda/Lib/site-packages/torch/nn/modules/module.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="201">
+          <caret line="741" column="24" selection-start-line="741" selection-start-column="8" selection-end-line="741" selection-end-column="24" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://D:/software/anaconda/Lib/site-packages/torch/optim/adam.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-196">
+          <caret line="73" column="34" selection-start-line="73" selection-start-column="27" selection-end-line="73" selection-end-column="34" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/.PyCharm2018.2/system/python_stubs/-2083645195/builtins.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="187">
+          <caret line="3004" column="47" selection-start-line="3004" selection-start-column="47" selection-end-line="3004" selection-end-column="47" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://D:/software/anaconda/Lib/site-packages/torch/optim/optimizer.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-462">
+          <caret line="9" column="6" selection-start-line="9" selection-start-column="6" selection-end-line="9" selection-end-column="6" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/models/SeaReader_v3.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="336">
+          <caret line="20" column="34" selection-start-line="20" selection-start-column="34" selection-end-line="20" selection-end-column="34" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/models/layers.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="369">
+          <caret line="122" column="41" selection-start-line="122" selection-start-column="26" selection-end-line="122" selection-end-column="41" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/models/__init__.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="231">
-          <caret line="11" column="38" selection-start-line="11" selection-start-column="38" selection-end-line="11" selection-end-column="38" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/train_5c.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="357">
-          <caret line="125" lean-forward="true" selection-start-line="125" selection-end-line="125" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/models/SeaReader_v4.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-504">
-          <caret line="13" selection-start-line="13" selection-end-line="13" />
-          <folding>
-            <element signature="e#5253#5256#0" />
-            <element signature="e#13438#13462#0" />
-            <element signature="e#17711#17844#1" />
-            <element signature="e#17853#17886#0" />
-          </folding>
+          <caret line="11" column="42" selection-start-line="11" selection-start-column="28" selection-end-line="11" selection-end-column="42" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/config/global_config.yaml">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="399">
-          <caret line="19" column="7" selection-start-line="19" selection-start-column="7" selection-end-line="19" selection-end-column="7" />
+        <state relative-caret-position="210">
+          <caret line="25" column="23" selection-start-line="25" selection-start-column="23" selection-end-line="25" selection-end-column="23" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/train_5c.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="325">
+          <caret line="218" column="48" selection-start-line="218" selection-start-column="48" selection-end-line="218" selection-end-column="48" />
+          <folding>
+            <element signature="e#864#1745#0" />
+            <element signature="e#1831#2005#0" />
+            <element signature="e#2081#2414#0" />
+            <marker date="1533366386792" expanded="true" signature="20546:20781" ph="..." />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/models/SeaReader_v4.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="84">
+          <caret line="36" column="33" selection-start-line="36" selection-start-column="33" selection-end-line="36" selection-end-column="33" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/models/SeaReader_v4_5.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="126">
+          <caret line="115" column="47" selection-start-line="115" selection-start-column="47" selection-end-line="115" selection-end-column="47" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/models/SeaReader_v5.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-4113">
+          <caret line="50" column="26" selection-start-line="50" selection-start-column="26" selection-end-line="50" selection-end-column="26" />
         </state>
       </provider>
     </entry>
