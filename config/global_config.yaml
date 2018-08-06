@@ -3,7 +3,7 @@ data:
     train_path: /m/liyz/MedQA-workspace/rawdata/es_result_0713_production_idx/v6/v6_train.json.310000
     dev_path: /m/liyz/MedQA-workspace/rawdata/es_result_0713_production_idx/v6/v6_dev.json.13441
     test_path: /m/liyz/MedQA-workspace/rawdata/es_result_0713_production_idx/v6/v6_test.json.600
-  dataset_h5: /m/liyz/MedQA-workspace/v1.0/data/v6_31w_with366k_embedding_qas100_cont100_q60_a12_withlogicAndCategory.h5  #保存预处理的数据，embedding，w2id等
+  dataset_h5: /m/liyz/MedQA-workspace/v1.0/data/v6_31w_answerfirst_with366kembed_qas100_cont100_q60_a12_withlogicAndCategory.h5  #保存预处理的数据，embedding，w2id等
   ignore_max_len: 100 # in train data, context token len > ignore_max_len will be dropped
   ignore_max_ques_ans_len: 100
   ignore_max_question_len: 60

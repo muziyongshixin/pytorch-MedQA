@@ -121,6 +121,8 @@ def train_5c(config_path, experiment_info, thread_queue):
         model=SeaReader_v4_5(dataset_h5_path,device)
     elif model_choose == 'SeaReader_v5':
         model = SeaReader_v5(dataset_h5_path, device)
+    elif model_choose == 'SeaReader_v6':
+        model = SeaReader_v6(dataset_h5_path, device)
     elif model_choose=='No_content_model':
         model= No_content_model(dataset_h5_path)
     elif model_choose == 'SeaReader_attention':
@@ -212,6 +214,8 @@ def train_5c(config_path, experiment_info, thread_queue):
         model.train()  # set training = True, make sure right dropout
         if epoch>=2:
             model.use_content_nums=10
+        if optimizer.param_groups[0]['lr']<=(1e-4):  # lr下降的时候，将embedding loss的权重增大10倍，避免过拟合问题
+            all_criterion[2].c=10
         train_avg_loss, train_avg_problem_acc = train_on_model(model=model,
                                                                criterion=all_criterion,
                                                                optimizer=optimizer,

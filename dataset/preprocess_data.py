@@ -152,7 +152,8 @@ class PreprocessData:
                 cur_question, cur_ans = cur_question_ans.split("\u0001")
                 cur_question_words=cur_question.split(" ")
                 cur_ans_words=cur_ans.split(" ")
-                cur_question_ans_words=cur_question_ans.split(" ")
+                # cur_question_ans_words=cur_question_ans.split(" ")
+                cur_question_ans_words=cur_ans_words+["\u0001"]+cur_question_words #把answer放到前面
 
                 if len(cur_question_ans_words) == 0:
                     logger.error("cur_question_ans_words length is 0, question id is %s" % cur_quesion_id)

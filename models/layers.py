@@ -296,10 +296,6 @@ class qa_matching_layer(torch.nn.Module):
         ws_factor=1
         self.R=R
 
-
-        # self.fixed_embedding=Word2VecEmbedding(dataset_h5_path=dataset_h5_path, trainable=embedding_trainable)
-        # self.delta_embedding = delta_Embedding(n_embeddings=vocabulary_size, len_embedding=word_embedding_size,
-        #                                        init_uniform=0.1, trainable=True)
         self.question_context_layer=MyLSTM(mode=hidden_mode,
                                        input_size=word_embedding_size,
                                        hidden_size=hidden_size,
